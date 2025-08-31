@@ -288,8 +288,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
                     focusedField === 'name' ? 'scale-105' : ''
                   }`}
                   style={{
-                    boxShadow: focusedField === 'name' ? 'var(--shadow-glow)' : undefined,
-                    color: '#000000'
+                    boxShadow: focusedField === 'name' ? 'var(--shadow-glow)' : undefined
                   }}
                   required
                 />
@@ -325,8 +324,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
                     focusedField === 'emailOrPhone' ? 'scale-105' : ''
                   }`}
                   style={{
-                    boxShadow: focusedField === 'emailOrPhone' ? 'var(--shadow-glow)' : undefined,
-                    color: '#000000'
+                    boxShadow: focusedField === 'emailOrPhone' ? 'var(--shadow-glow)' : undefined
                   }}
                   required
                 />
@@ -363,8 +361,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
                   }`}
                   style={{
                     paddingRight: '3rem',
-                    boxShadow: focusedField === 'password' ? 'var(--shadow-glow)' : undefined,
-                    color: '#000000'
+                    boxShadow: focusedField === 'password' ? 'var(--shadow-glow)' : undefined
                   }}
                   required
                 />
@@ -401,15 +398,12 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
                       ${formData.role === role 
                         ? 'border-primary-500 bg-primary-50' 
                         : 'border-neutral-200 bg-white hover:border-primary-300'
-                        
                       }
                     `}
-                   style={{
-                            backgroundColor: formData.role === role ? 'var(--primary-900)' : 'white',
-                            color: formData.role === role ? '#ffffff' : '#000000',
-                          }}
-
-
+                    style={{
+                      boxShadow: formData.role === role ? 'var(--shadow-glow)' : undefined,
+                      backgroundColor: formData.role === role ? 'var(--primary-50)' : undefined
+                    }}
                   >
                     <input
                       type="radio"
@@ -516,8 +510,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
                     className="input-field"
                     style={{
                       borderColor: 'var(--secondary-300)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                      color: '#000000'
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)'
                     }}
                     required
                   />
