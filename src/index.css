@@ -989,7 +989,7 @@ body {
 @media (prefers-color-scheme: dark) {
   :root {
     --primary-50: #1a1a1a;
-    --neutral-900: #171717;
+    --neutral-900: #ffffff;
   }
   
   body {
