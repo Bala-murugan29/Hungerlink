@@ -90,7 +90,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess
             top: '50%', 
             left: '25%',
             background: 'rgba(245, 158, 11, 0.1)',
-            filter: 'blur(2rem)'
+            filter: 'blur(2rem)',
+             color: '#000000'
           }} 
         />
         
