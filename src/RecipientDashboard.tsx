@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, Clock, MapPin, ArrowLeft, Users, Heart, TrendingUp, CheckCircle, Sparkles } from 'lucide-react';
+import { Plus, Eye, Clock, MapPin, ArrowLeft, Users, Heart, TrendingUp, Sparkles } from 'lucide-react';
 import Logo from './Logo';
 import Toast from './Toast';
 
@@ -38,8 +38,12 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
   const [requests, setRequests] = useState<Request[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [donationsLoading, setDonationsLoading] = useState(false);
+  const [donationsError, setDonationsError] = useState<string | null>(null);
+  const [claimingDonationId, setClaimingDonationId] = useState<string | null>(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
 
   // Request form state
   const [requestForm, setRequestForm] = useState({
@@ -56,6 +60,13 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
     loadDonations();
   }, []);
 
+  // Refresh donations when navigating into the donations view
+  useEffect(() => {
+    if (currentView === 'donations') {
+      loadDonations();
+    }
+  }, [currentView]);
+
   const loadRequests = async () => {
     // Start with empty array - no sample data
     setRequests([]);
@@ -63,21 +74,22 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
 
   const loadDonations = async () => {
     try {
-      const token = localStorage.getItem('hungerlink_token');
-      const response = await fetch('http://localhost:5000/api/donations', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
+      setDonationsError(null);
+      setDonationsLoading(true);
+      const response = await fetch(`${API_BASE}/api/donations`);
       if (response.ok) {
         const data = await response.json();
-        setDonations(data.donations || []);
+        const list = Array.isArray(data) ? data : (data?.donations || []);
+        setDonations(list);
       } else {
         console.error('Failed to load donations');
+        setDonationsError('Failed to load donations');
       }
     } catch (error) {
       console.error('Error loading donations:', error);
+      setDonationsError('Error loading donations');
+    } finally {
+      setDonationsLoading(false);
     }
   };
 
@@ -165,10 +177,16 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
   };
 
   const handleClaimDonation = async (donationId: string) => {
+    // Optimistic UI: mark this donation as being claimed locally
+    setClaimingDonationId(donationId);
+    // also set a global loading flag so other UI can reflect action if needed
     setIsLoading(true);
+    // update local donations array optimistically
+    setDonations(prev => prev.map(d => d._id === donationId ? { ...d, status: 'claimed', claimedBy: user._id } : d));
+
     try {
       const token = localStorage.getItem('hungerlink_token');
-      const response = await fetch(`http://localhost:5000/api/donations/${donationId}`, {
+      const response = await fetch(`${API_BASE}/api/donations/${donationId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -180,20 +198,33 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to claim donation');
       }
+
       setToast({
         show: true,
         message: `🎉 You claimed the donation. Arrange pickup.`,
         type: 'success'
       });
-      // Optionally reload donations
-      loadDonations();
+
+      // Replace optimistic item with server response (if returns updated donation)
+      try {
+        const updated = await response.json();
+        if (updated && updated._id) {
+          setDonations(prev => prev.map(d => d._id === updated._id ? updated : d));
+        }
+      } catch (e) {
+        // ignore parse errors and keep optimistic state
+      }
+
     } catch (error: any) {
+      // revert optimistic update on error
+      setDonations(prev => prev.map(d => d._id === donationId ? { ...d, status: 'available', claimedBy: undefined } : d));
       setToast({
         show: true,
         message: error.message || 'Failed to claim donation. Please try again.',
         type: 'error'
       });
     } finally {
+      setClaimingDonationId(null);
       setIsLoading(false);
     }
   };
@@ -532,7 +563,17 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
             {/* Donations List */}
             <div className="grid-responsive">
               <div style={{ gridColumn: '1 / -1' }}>
-                {donations.length === 0 ? (
+                {donationsLoading ? (
+                  <div className="card p-12 text-center animate-scale-in">
+                    <div className="w-8 h-8 border-2 border-neutral-300 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="dashboard-subtitle">Loading donations...</p>
+                  </div>
+                ) : donationsError ? (
+                  <div className="card p-12 text-center animate-scale-in">
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">Could not load donations</h3>
+                    <p className="dashboard-subtitle">{donationsError}</p>
+                  </div>
+                ) : donations.length === 0 ? (
                   <div className="card p-12 text-center animate-scale-in">
                     <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Heart className="w-12 h-12 text-neutral-400" />
@@ -549,7 +590,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                           <div className="md:w-48 h-48 bg-neutral-100 rounded-xl overflow-hidden flex-shrink-0">
                             {donation.photo ? (
                               <img 
-                                src={`http://localhost:3000${donation.photo}`} 
+                                src={`${API_BASE}${donation.photo}`} 
                                 alt={donation.foodType}
                                 className="w-full h-full object-cover"
                               />
@@ -566,9 +607,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                               <div>
                                 <h3 className="text-xl font-semibold dashboard-title mb-2">{donation.foodType}</h3>
                                 <p className="dashboard-subtitle mb-2">Quantity: {donation.quantity}</p>
-                                <p className="dashboard-subtitle mb-2">
-                                  Expires: {new Date(donation.expiryTime).toLocaleString()}
-                                </p>
+                                <p className="dashboard-subtitle mb-2">Expires: {donation.expiryTime}</p>
                                 <p className="dashboard-subtitle">
                                   Location: {typeof donation.location === 'string' 
                                     ? donation.location 
@@ -577,13 +616,25 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                               </div>
                               <div className="flex flex-col gap-2">
                                 {getStatusBadge(donation.status, donation.aiQuality)}
-                                {donation.status === 'available' && (
-                                  <button
-                                    onClick={() => handleClaimDonation(donation._id)}
-                                    className="btn-secondary text-sm px-4 py-2"
-                                  >
-                                    Claim Food
-                                  </button>
+                                { (donation.status === 'available' || claimingDonationId === donation._id) && (
+                                  // show button when available; when claimingDonationId matches this donation we show disabled state
+                                  donation.status === 'available' ? (
+                                    <button
+                                      onClick={() => handleClaimDonation(donation._id)}
+                                      className="btn-secondary text-sm px-4 py-2"
+                                      disabled={!!claimingDonationId}
+                                    >
+                                      {claimingDonationId === donation._id ? 'Claiming...' : 'Claim Food'}
+                                    </button>
+                                  ) : (
+                                    // if donation.status is not 'available' but this donation is currently being claimed optimistically,
+                                    // show a disabled button or the claimed badge
+                                    claimingDonationId === donation._id ? (
+                                      <button className="btn-secondary text-sm px-4 py-2 opacity-70 cursor-not-allowed" disabled>
+                                        Claiming...
+                                      </button>
+                                    ) : null
+                                  )
                                 )}
                               </div>
                             </div>

@@ -407,8 +407,8 @@ body {
 .hover\:text-primary-600:hover { color: var(--primary-600); }
 .hover\:text-neutral-600:hover { color: var(--neutral-600); }
 .hover\:bg-primary-50:hover { background-color: var(--primary-50); }
-.hover\:bg-primary-25:hover { background-color: rgba(255, 122, 0, 0.05); }
-.hover\:bg-secondary-25:hover { background-color: rgba(59, 178, 115, 0.05); }
+.hover\:bg-primary-25:hover { background-color: rgba(232, 132, 38, 0.901); }
+.hover\:bg-secondary-25:hover { background-color: rgba(59, 126, 178, 0.636); }
 .hover\:bg-neutral-100:hover { background-color: var(--neutral-100); }
 .hover\:bg-white:hover { background-color: #ffffff; }
 .hover\:border-primary-300:hover { border-color: var(--primary-300); }
@@ -998,8 +998,8 @@ body {
   }
   
   .card {
-    background-color: rgba(38, 38, 38, 0.9);
-    border-color: rgba(115, 115, 115, 0.2);
+    background-color: rgba(224, 203, 15, 0.9);
+    border-color: rgba(226, 14, 14, 0.2);
   }
   
   .input-field {
@@ -1298,4 +1298,15 @@ body {
   background-color: var(--error);
   border-radius: 50%;
   animation: pulse 1s infinite;
+}
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input {
+  color: #333; /* Dark readable text */
+  background-color: #fff; /* Light background for contrast */
+}
+
+input::placeholder {
+  color: #888; /* Visible placeholder text */
 }
