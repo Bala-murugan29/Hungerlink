@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, Clock, MapPin, Camera, Upload, CheckCircle, AlertTriangle, X, ArrowLeft, Sparkles, Heart, TrendingUp, Users } from 'lucide-react';
+import { Plus, Eye, Clock, MapPin, Camera, Upload, CheckCircle, ArrowLeft, Sparkles, Heart, TrendingUp, Users } from 'lucide-react';
 import Logo from './Logo';
 import Toast from './Toast';
-import { geminiService, FoodQualityResult } from './services/geminiService';
+import { FoodQualityResult } from './services/geminiService';
 interface DonorDashboardProps {
   user: any;
   onLogout: () => void;
 }
 
 interface Donation {
-  id: string;
+  _id: string;
   foodType: string;
   quantity: string;
   expiryTime: string;
-  location: string;
+  location: any;
   photo?: string;
   status: 'available' | 'claimed' | 'completed';
   aiQuality?: 'fresh' | 'check' | 'not-suitable';
@@ -22,22 +22,13 @@ interface Donation {
   createdAt: string;
 }
 
-interface Request {
-  id: string;
-  foodNeeded: string;
-  quantity: string;
-  location: string;
-  distance: string;
-  requesterName: string;
-  requesterType: 'ngo' | 'individual';
-  status: 'open' | 'accepted' | 'fulfilled';
-  createdAt: string;
-}
+// Removed unused Request interface
 
 const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
+  console.log('DonorDashboard mounted');
   const [currentView, setCurrentView] = useState<'dashboard' | 'donate' | 'requests'>('dashboard');
   const [donations, setDonations] = useState<Donation[]>([]);
-  const [requests, setRequests] = useState<Request[]>([]);
+  // Removed unused requests state
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -55,19 +46,30 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
   const [isProcessingAI, setIsProcessingAI] = useState(false);
 
   useEffect(() => {
+    console.log('useEffect running, calling loadDonations');
     loadDonations();
-    loadRequests();
   }, []);
 
   const loadDonations = async () => {
-    // Start with empty array - no sample data
-    setDonations([]);
+    console.log('Calling loadDonations');
+    try {
+      const token = localStorage.getItem('hungerlink_token');
+      const response = await fetch('http://localhost:5000/api/donations/my', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch donations');
+      const data = await response.json();
+      console.log('Fetched donations:', data.donations);
+      setDonations(data.donations || []);
+    } catch (error) {
+      console.error('Error in loadDonations:', error);
+      setDonations([]);
+    }
   };
 
-  const loadRequests = async () => {
-    // Start with empty array - no sample data
-    setRequests([]);
-  };
+  // Removed unused loadRequests function
 
   const handleDonationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -117,50 +119,37 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
     e.preventDefault();
     setIsLoading(true);
     setIsProcessingAI(true);
-
     try {
-      // Show AI processing message
-      setToast({
-        show: true,
-        message: '🤖 Analyzing food quality with Gemini 2.0 Flash...',
-        type: 'success'
+      // Prepare form data for photo upload
+      const formData = new FormData();
+  formData.append('foodType', donationForm.foodType);
+  formData.append('quantity', donationForm.quantity);
+  formData.append('expiryTime', donationForm.expiryTime);
+  formData.append('location', JSON.stringify({ address: donationForm.location }));
+      if (donationForm.photo) formData.append('photo', donationForm.photo);
+
+      // Get token for authentication
+      const token = localStorage.getItem('hungerlink_token');
+
+      // Send POST request to backend
+  const response = await fetch('http://localhost:5000/api/donations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
       });
 
-      // Analyze food quality with Gemini
-      const aiAnalysis = await geminiService.analyzeFoodQuality(
-        donationForm.foodType,
-        donationForm.expiryTime,
-        donationForm.photo || undefined
-      );
-
-      const newDonation: Donation = {
-        id: Date.now().toString(),
-        foodType: donationForm.foodType,
-        quantity: donationForm.quantity,
-        expiryTime: donationForm.expiryTime,
-        location: donationForm.location,
-        photo: donationForm.photo ? URL.createObjectURL(donationForm.photo) : undefined,
-        status: 'available',
-        aiQuality: aiAnalysis.quality,
-        aiAnalysis: aiAnalysis,
-        createdAt: new Date().toISOString()
-      };
-
-      setDonations(prev => [newDonation, ...prev]);
-
-      let qualityMessage = '';
-      if (aiAnalysis.quality === 'fresh') {
-        qualityMessage = `✅ Fresh quality detected! (${aiAnalysis.confidence}% confidence)`;
-      } else if (aiAnalysis.quality === 'check') {
-        qualityMessage = `⚠️ Please verify food quality. (${aiAnalysis.confidence}% confidence)`;
-      } else {
-        qualityMessage = `❌ Food may not be suitable for donation. (${aiAnalysis.confidence}% confidence)`;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to post donation');
       }
 
+  // Removed unused result variable
       setToast({
         show: true,
-        message: `🎉 Donation posted! ${qualityMessage}`,
-        type: aiAnalysis.quality === 'not-suitable' ? 'error' : 'success'
+        message: '🎉 Donation posted successfully!',
+        type: 'success'
       });
 
       // Reset form
@@ -171,13 +160,13 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
         location: user?.location?.address || '',
         photo: null
       });
-
       setCurrentView('dashboard');
-
-    } catch (error) {
+      // Optionally reload donations
+      loadDonations();
+    } catch (error: any) {
       setToast({
         show: true,
-        message: 'Failed to post donation. Please try again.',
+        message: error.message || 'Failed to post donation. Please try again.',
         type: 'error'
       });
     } finally {
@@ -186,54 +175,9 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
-  const handleAcceptRequest = async (requestId: string) => {
-    setIsLoading(true);
-    try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  // Removed unused handleAcceptRequest
 
-      setRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'accepted' as const }
-            : req
-        )
-      );
-
-      const request = requests.find(r => r.id === requestId);
-      setToast({
-        show: true,
-        message: `✅ You accepted ${request?.requesterName}'s request.`,
-        type: 'success'
-      });
-
-    } catch (error) {
-      setToast({
-        show: true,
-        message: 'Failed to accept request. Please try again.',
-        type: 'error'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getStatusBadge = (status: string, aiQuality?: string) => {
-    if (aiQuality) {
-      if (aiQuality === 'fresh') return <span className="badge badge-success">✅ Fresh</span>;
-      if (aiQuality === 'check') return <span className="badge badge-warning">⚠️ Check</span>;
-      if (aiQuality === 'not-suitable') return <span className="badge badge-error">❌ Not Suitable</span>;
-    }
-    
-    if (status === 'available') return <span className="badge badge-info">Available</span>;
-    if (status === 'claimed') return <span className="badge badge-warning">Claimed</span>;
-    if (status === 'completed') return <span className="badge badge-success">Completed</span>;
-    if (status === 'open') return <span className="badge badge-info">Open</span>;
-    if (status === 'accepted') return <span className="badge badge-success">Accepted</span>;
-    if (status === 'fulfilled') return <span className="badge badge-success">Fulfilled</span>;
-    
-    return null;
-  };
+  // Removed unused getStatusBadge
 
   if (currentView === 'donate') {
     return (
@@ -600,6 +544,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
     );
   }
 
+  console.log('Rendering DonorDashboard, donations:', donations);
   return (
     <div className="min-h-screen bg-warm-gradient relative overflow-hidden">
       <Toast 
@@ -762,21 +707,48 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
             </div>
             
             <div className="grid-responsive">
-              <div style={{ gridColumn: '1 / -1' }}>
-                <div className="card p-12 text-center">
-                  <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Heart className="w-12 h-12 text-neutral-400" />
+              {donations.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div className="card p-12 text-center">
+                    <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Heart className="w-12 h-12 text-neutral-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">No donations yet</h3>
+                    <p className="dashboard-subtitle mb-6">Start by posting your first donation to help those in need.</p>
+                    <button 
+                      onClick={() => setCurrentView('donate')}
+                      className="btn-primary"
+                    >
+                      Post Your First Donation
+                    </button>
                   </div>
-                  <h3 className="text-xl font-semibold dashboard-title mb-2">No donations yet</h3>
-                  <p className="dashboard-subtitle mb-6">Start by posting your first donation to help those in need.</p>
-                  <button 
-                    onClick={() => setCurrentView('donate')}
-                    className="btn-primary"
-                  >
-                    Post Your First Donation
-                  </button>
                 </div>
-              </div>
+              ) : (
+                donations.map(donation => (
+                  <div key={donation._id} className="card p-8 flex gap-6 items-center">
+                    {donation.photo ? (
+                      <img
+                        src={`http://localhost:5000${donation.photo}`}
+                        alt="Food Donation"
+                        className="w-32 h-32 object-cover rounded-2xl border"
+                        style={{ flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div className="w-32 h-32 bg-neutral-100 rounded-2xl flex items-center justify-center">
+                        <Camera className="w-12 h-12 text-neutral-400" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold dashboard-title mb-2">{donation.foodType}</h3>
+                      <p className="dashboard-subtitle mb-2">Quantity: {donation.quantity}</p>
+                      <p className="dashboard-subtitle mb-2">Expiry: {donation.expiryTime}</p>
+                      <p className="dashboard-subtitle mb-2">Location: {typeof donation.location === 'object' && donation.location !== null && (donation.location as any).address ? (donation.location as any).address : donation.location}</p>
+                      <span className="badge badge-info mr-2">{donation.status}</span>
+                      {donation.aiQuality && <span className="badge badge-secondary">AI: {donation.aiQuality}</span>}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

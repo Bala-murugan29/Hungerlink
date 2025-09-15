@@ -20,17 +20,17 @@ interface Request {
 }
 
 interface Donation {
-  id: string;
+  _id: string;
   foodType: string;
   quantity: string;
   expiryTime: string;
-  location: string;
-  distance: string;
-  donorName: string;
-  aiQuality: 'fresh' | 'check' | 'not-suitable';
-  status: 'available' | 'claimed';
+  location: { address: string; coordinates?: any } | string;
   photo?: string;
+  status: 'available' | 'claimed' | 'completed';
+  aiQuality?: 'fresh' | 'check' | 'not-suitable';
+  claimedBy?: string;
   createdAt: string;
+  user?: any;
 }
 
 const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout }) => {
@@ -62,8 +62,23 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
   };
 
   const loadDonations = async () => {
-    // Start with empty array - no sample data
-    setDonations([]);
+    try {
+      const token = localStorage.getItem('hungerlink_token');
+      const response = await fetch('http://localhost:5000/api/donations', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setDonations(data.donations || []);
+      } else {
+        console.error('Failed to load donations');
+      }
+    } catch (error) {
+      console.error('Error loading donations:', error);
+    }
   };
 
   const handleRequestInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,28 +167,30 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
   const handleClaimDonation = async (donationId: string) => {
     setIsLoading(true);
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setDonations(prev => 
-        prev.map(donation => 
-          donation.id === donationId 
-            ? { ...donation, status: 'claimed' as const }
-            : donation
-        )
-      );
-
-      const donation = donations.find(d => d.id === donationId);
+      const token = localStorage.getItem('hungerlink_token');
+      const response = await fetch(`http://localhost:5000/api/donations/${donationId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'claimed', claimedBy: user._id })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to claim donation');
+      }
       setToast({
         show: true,
-        message: `🎉 You claimed ${donation?.foodType}. Arrange pickup.`,
+        message: `🎉 You claimed the donation. Arrange pickup.`,
         type: 'success'
       });
-
-    } catch (error) {
+      // Optionally reload donations
+      loadDonations();
+    } catch (error: any) {
       setToast({
         show: true,
-        message: 'Failed to claim donation. Please try again.',
+        message: error.message || 'Failed to claim donation. Please try again.',
         type: 'error'
       });
     } finally {
@@ -512,16 +529,70 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
               </p>
             </div>
             
-            {/* Empty State */}
+            {/* Donations List */}
             <div className="grid-responsive">
               <div style={{ gridColumn: '1 / -1' }}>
-                <div className="card p-12 text-center animate-scale-in">
-                  <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Heart className="w-12 h-12 text-neutral-400" />
+                {donations.length === 0 ? (
+                  <div className="card p-12 text-center animate-scale-in">
+                    <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Heart className="w-12 h-12 text-neutral-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">No donations available</h3>
+                    <p className="dashboard-subtitle">Check back later for new food donations from the community.</p>
                   </div>
-                  <h3 className="text-xl font-semibold dashboard-title mb-2">No donations available</h3>
-                  <p className="dashboard-subtitle">Check back later for new food donations from the community.</p>
-                </div>
+                ) : (
+                  <div className="space-y-6">
+                    {donations.map((donation) => (
+                      <div key={donation._id} className="card p-6 animate-scale-in">
+                        <div className="flex flex-col md:flex-row gap-6">
+                          {/* Photo */}
+                          <div className="md:w-48 h-48 bg-neutral-100 rounded-xl overflow-hidden flex-shrink-0">
+                            {donation.photo ? (
+                              <img 
+                                src={`http://localhost:3000${donation.photo}`} 
+                                alt={donation.foodType}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Heart className="w-12 h-12 text-neutral-400" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-4">
+                              <div>
+                                <h3 className="text-xl font-semibold dashboard-title mb-2">{donation.foodType}</h3>
+                                <p className="dashboard-subtitle mb-2">Quantity: {donation.quantity}</p>
+                                <p className="dashboard-subtitle mb-2">
+                                  Expires: {new Date(donation.expiryTime).toLocaleString()}
+                                </p>
+                                <p className="dashboard-subtitle">
+                                  Location: {typeof donation.location === 'string' 
+                                    ? donation.location 
+                                    : donation.location?.address || 'Address not available'}
+                                </p>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                {getStatusBadge(donation.status, donation.aiQuality)}
+                                {donation.status === 'available' && (
+                                  <button
+                                    onClick={() => handleClaimDonation(donation._id)}
+                                    className="btn-secondary text-sm px-4 py-2"
+                                  >
+                                    Claim Food
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
