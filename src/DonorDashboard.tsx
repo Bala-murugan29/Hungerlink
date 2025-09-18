@@ -96,6 +96,15 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
+  // Map AI quality to a clear badge like in Recipient view
+  const getAiBadge = (quality?: 'fresh' | 'check' | 'not-suitable') => {
+    if (!quality) return null;
+    if (quality === 'fresh') return <span className="badge badge-success">✅ Fresh</span>;
+    if (quality === 'check') return <span className="badge badge-warning">⚠️ Check</span>;
+    if (quality === 'not-suitable') return <span className="badge badge-error">❌ Not Suitable</span>;
+    return null;
+  };
+
   const loadRequests = async () => {
     try {
       setRequestsError(null);
@@ -193,7 +202,8 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
   formData.append('location', JSON.stringify({ address: donationForm.location }));
       if (targetRequest) formData.append('request', targetRequest._id);
       if (donationForm.photo) formData.append('photo', donationForm.photo);
-      if (aiResult?.quality) formData.append('aiQuality', aiResult.quality);
+  if (aiResult?.quality) formData.append('aiQuality', aiResult.quality);
+  if (aiResult) formData.append('aiAnalysis', JSON.stringify(aiResult));
 
       // Get token for authentication
       const token = localStorage.getItem('hungerlink_token');
@@ -905,7 +915,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                       )}
                       <p className="dashboard-subtitle mb-2">Location: {typeof donation.location === 'object' && donation.location !== null && (donation.location as any).address ? (donation.location as any).address : donation.location}</p>
                       <span className="badge badge-info mr-2">{donation.status}</span>
-                      {donation.aiQuality && <span className="badge badge-secondary">AI: {donation.aiQuality}</span>}
+                      {getAiBadge(donation.aiQuality)}
                     </div>
                   </div>
                 ))

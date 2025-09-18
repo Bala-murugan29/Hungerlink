@@ -28,6 +28,12 @@ const DonationSchema = new mongoose.Schema({
   photo: { type: String },
   status: { type: String, enum: ['available', 'claimed', 'completed'], default: 'available' },
   aiQuality: { type: String, enum: ['fresh', 'check', 'not-suitable'] },
+  aiAnalysis: {
+    quality: { type: String, enum: ['fresh', 'check', 'not-suitable'] },
+    confidence: { type: Number },
+    reasons: { type: [String], default: [] },
+    recommendations: { type: [String], default: [] }
+  },
   claimedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   claimantPhone: { type: String },
   donorPhone: { type: String },

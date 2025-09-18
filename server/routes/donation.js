@@ -24,7 +24,7 @@ const upload = multer({ storage });
 // Create a donation
 router.post('/', authenticateToken, upload.single('photo'), async (req, res) => {
   try {
-    let { location } = req.body;
+  let { location } = req.body;
     // Parse location if sent as string (from FormData)
     if (typeof location === 'string') {
       try {
@@ -51,8 +51,19 @@ router.post('/', authenticateToken, upload.single('photo'), async (req, res) => 
       }
     }
 
+    // Parse aiAnalysis if present as JSON string
+    let aiAnalysis = undefined;
+    if (req.body.aiAnalysis) {
+      try {
+        aiAnalysis = typeof req.body.aiAnalysis === 'string' ? JSON.parse(req.body.aiAnalysis) : req.body.aiAnalysis;
+      } catch (_) {
+        aiAnalysis = undefined; // ignore bad payload
+      }
+    }
+
     const donation = new Donation({
       ...req.body,
+      ...(aiAnalysis ? { aiAnalysis } : {}),
       request: linkedRequest ? linkedRequest._id : undefined,
       location,
       user: req.user._id,

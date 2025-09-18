@@ -21,16 +21,23 @@ interface Request {
   remainingQuantity?: number;
 }
 
+interface FoodQualityResult {
+  quality: 'fresh' | 'check' | 'not-suitable';
+  confidence?: number;
+  reasons?: string[];
+  recommendations?: string[];
+}
+
 interface Donation {
   _id: string;
   foodType: string;
   quantity: string;
-  // expiryTime removed in favor of manufacturingDate
   manufacturingDate?: string;
   location: { address: string; coordinates?: any } | string;
   photo?: string;
   status: 'available' | 'claimed' | 'completed';
   aiQuality?: 'fresh' | 'check' | 'not-suitable';
+  aiAnalysis?: FoodQualityResult;
   claimedBy?: string;
   createdAt: string;
   user?: any;
@@ -641,6 +648,31 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                                     ? donation.location 
                                     : donation.location?.address || 'Address not available'}
                                 </p>
+
+                                {/* AI Insights Section */}
+                                <div className="mt-3 p-3 bg-primary-50 border border-primary-200 rounded-xl">
+                                  <h4 className="font-semibold text-primary-700 mb-1 text-base">AI Insights</h4>
+                                  {donation.aiAnalysis && (donation.aiAnalysis.reasons?.length || donation.aiAnalysis.recommendations?.length) ? (
+                                    <>
+                                      {(donation.aiAnalysis.reasons?.length ?? 0) > 0 && (
+                                        <ul className="text-sm mb-1 list-disc pl-5">
+                                          {(donation.aiAnalysis.reasons ?? []).map((reason: string, idx: number) => (
+                                            <li key={idx}>{reason}</li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                      {(donation.aiAnalysis.recommendations?.length ?? 0) > 0 && (
+                                        <ul className="text-xs text-primary-800 list-disc pl-5">
+                                          {(donation.aiAnalysis.recommendations ?? []).map((rec: string, idx: number) => (
+                                            <li key={idx}>{rec}</li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <span className="text-xs text-primary-700">No AI insights available for this donation.</span>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex flex-col gap-2">
                                 {getStatusBadge(donation.status, donation.aiQuality)}
@@ -665,8 +697,6 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                                         </button>
                                       </div>
                                     ) : (
-                                      // if donation.status is not 'available' but this donation is currently being claimed optimistically,
-                                      // show a disabled button or the claimed badge
                                       claimingDonationId === donation._id ? (
                                         <button className="btn-secondary text-sm px-4 py-2 opacity-70 cursor-not-allowed" disabled>
                                           Claiming...

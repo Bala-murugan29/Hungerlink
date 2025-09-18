@@ -565,7 +565,8 @@ body {
   backdrop-filter: blur(4px);
   border: 1px solid rgba(212, 212, 212, 0.5);
   border-radius: var(--radius-2xl);
-  color: var(--neutral-900);
+  color: #333;
+  caret-color: #333;
   font-size: 1rem;
   transition: all var(--timing-normal) var(--ease-out);
 }
@@ -576,6 +577,7 @@ body {
 
 .input-field:hover {
   border-color: var(--neutral-300);
+  color: #333;
 }
 
 .input-field:focus {
@@ -583,6 +585,21 @@ body {
   border-color: var(--primary-500);
   background-color: white;
   box-shadow: 0 0 0 4px rgba(255, 122, 0, 0.1);
+  color: #333;
+  caret-color: #333;
+}
+
+/* Keep readable text on selection and browser autofill */
+.input-field::selection {
+  background-color: rgba(255, 122, 0, 0.2);
+  color: #333;
+}
+
+.input-field:-webkit-autofill,
+.input-field:-webkit-autofill:hover,
+.input-field:-webkit-autofill:focus {
+  -webkit-text-fill-color: #333 !important;
+  caret-color: #333;
 }
 
 /* Card Styles */
@@ -1320,6 +1337,7 @@ body {
 input[type="text"],
 input[type="email"],
 input[type="password"],
+input[type="phone"],
 input {
   color: #333; /* Dark readable text */
   background-color: #fff; /* Light background for contrast */
