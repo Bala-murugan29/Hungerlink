@@ -2,23 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Eye, Clock, MapPin, Camera, Upload, CheckCircle, ArrowLeft, Sparkles, Heart, TrendingUp, Users } from 'lucide-react';
 import Logo from './Logo';
 import Toast from './Toast';
-import { FoodQualityResult } from './services/geminiService';
+import { FoodQualityResult, geminiService } from './services/geminiService';
 interface DonorDashboardProps {
   user: any;
   onLogout: () => void;
+}
+
+interface RequestItem {
+  _id: string;
+  foodNeeded: string;
+  quantity: string;
+  numericRequested?: number;
+  fulfilledQuantity?: number;
+  remainingQuantity?: number;
+  location: { address: string } | string;
+  requesterType?: 'ngo' | 'individual';
+  status: 'open' | 'accepted' | 'fulfilled';
+  createdAt: string;
 }
 
 interface Donation {
   _id: string;
   foodType: string;
   quantity: string;
-  expiryTime: string;
+  // expiryTime removed in favor of manufacturingDate
+  manufacturingDate?: string;
   location: any;
   photo?: string;
   status: 'available' | 'claimed' | 'completed';
   aiQuality?: 'fresh' | 'check' | 'not-suitable';
   aiAnalysis?: FoodQualityResult;
-  claimedBy?: string;
+  claimedBy?: string | any;
+  claimantPhone?: string;
   createdAt: string;
 }
 
@@ -28,19 +43,24 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
   console.log('DonorDashboard mounted');
   const [currentView, setCurrentView] = useState<'dashboard' | 'donate' | 'requests'>('dashboard');
   const [donations, setDonations] = useState<Donation[]>([]);
-  // Removed unused requests state
+  const [requests, setRequests] = useState<RequestItem[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
 
   // Donation form state
   const [donationForm, setDonationForm] = useState({
     foodType: '',
     quantity: '',
-    expiryTime: '',
+  manufacturingDate: '',
     location: user?.location?.address || '',
-    photo: null as File | null
+    photo: null as File | null,
+    donorPhone: user?.phone || ''
   });
+  const [targetRequest, setTargetRequest] = useState<RequestItem | null>(null);
 
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
@@ -50,11 +70,18 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
     loadDonations();
   }, []);
 
+  // When navigating to requests view, load them
+  useEffect(() => {
+    if (currentView === 'requests') {
+      loadRequests();
+    }
+  }, [currentView]);
+
   const loadDonations = async () => {
     console.log('Calling loadDonations');
     try {
       const token = localStorage.getItem('hungerlink_token');
-      const response = await fetch('http://localhost:5000/api/donations/my', {
+      const response = await fetch(`${API_BASE}/api/donations/my`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -69,7 +96,21 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
-  // Removed unused loadRequests function
+  const loadRequests = async () => {
+    try {
+      setRequestsError(null);
+      setRequestsLoading(true);
+      const res = await fetch(`${API_BASE}/api/requests`);
+      if (!res.ok) throw new Error('Failed to fetch requests');
+      const data = await res.json();
+      setRequests((data.requests || []).filter((r: RequestItem) => r.status !== 'fulfilled'));
+    } catch (e: any) {
+      setRequestsError(e.message || 'Failed to load requests');
+      setRequests([]);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
 
   const handleDonationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -119,20 +160,46 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
     e.preventDefault();
     setIsLoading(true);
     setIsProcessingAI(true);
-    try {
+  try {
+      // Client-side validation if donating to a request
+      const extractNumber = (s: string) => {
+        const m = String(s || '').match(/\d+(?:\.\d+)?/);
+        return m ? Number(m[0]) : 0;
+      };
+      if (targetRequest) {
+        const donateQty = extractNumber(donationForm.quantity);
+        const remaining = targetRequest.remainingQuantity ?? Math.max(0, (targetRequest.numericRequested || extractNumber(targetRequest.quantity)) - (targetRequest.fulfilledQuantity || 0));
+        if (donateQty > remaining) {
+          throw new Error(`Donation exceeds remaining need (${donateQty} > ${remaining}). Please reduce the quantity.`);
+        }
+      }
+
+      // AI analysis (non-blocking if it fails inside the service)
+      let aiResult: FoodQualityResult | null = null;
+      try {
+        aiResult = await geminiService.analyzeFoodQuality(
+          donationForm.foodType,
+          donationForm.manufacturingDate,
+          donationForm.photo || undefined
+        );
+      } catch {}
+
       // Prepare form data for photo upload
       const formData = new FormData();
   formData.append('foodType', donationForm.foodType);
   formData.append('quantity', donationForm.quantity);
-  formData.append('expiryTime', donationForm.expiryTime);
+  if (donationForm.manufacturingDate) formData.append('manufacturingDate', donationForm.manufacturingDate);
+  if (donationForm.donorPhone) formData.append('donorPhone', donationForm.donorPhone);
   formData.append('location', JSON.stringify({ address: donationForm.location }));
+      if (targetRequest) formData.append('request', targetRequest._id);
       if (donationForm.photo) formData.append('photo', donationForm.photo);
+      if (aiResult?.quality) formData.append('aiQuality', aiResult.quality);
 
       // Get token for authentication
       const token = localStorage.getItem('hungerlink_token');
 
       // Send POST request to backend
-  const response = await fetch('http://localhost:5000/api/donations', {
+  const response = await fetch(`${API_BASE}/api/donations`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -148,7 +215,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
   // Removed unused result variable
       setToast({
         show: true,
-        message: '🎉 Donation posted successfully!',
+        message: `🎉 Donation posted successfully${aiResult?.quality ? ` (AI: ${aiResult.quality})` : ''}!`,
         type: 'success'
       });
 
@@ -156,13 +223,18 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
       setDonationForm({
         foodType: '',
         quantity: '',
-        expiryTime: '',
-        location: user?.location?.address || '',
-        photo: null
+  // expiryTime removed
+  manufacturingDate: '',
+  location: user?.location?.address || '',
+  photo: null,
+  donorPhone: user?.phone || ''
       });
+  setTargetRequest(null);
       setCurrentView('dashboard');
       // Optionally reload donations
       loadDonations();
+  // Refresh requests list so fulfilled requests disappear
+  loadRequests();
     } catch (error: any) {
       setToast({
         show: true,
@@ -247,6 +319,13 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                 <p className="dashboard-subtitle">
                   Share your surplus food with those who need it most
                 </p>
+                {targetRequest && (
+                  <div className="mt-4 p-4 bg-secondary-50 border-2 border-secondary-200 rounded-2xl text-center">
+                    <div className="font-semibold text-error text-xl">Fulfilling Request: {targetRequest.foodNeeded}</div>
+                    <div className="text-sm text-error">Remaining needed: {targetRequest.remainingQuantity ?? Math.max(0, (targetRequest.numericRequested || 0) - (targetRequest.fulfilledQuantity || 0))}</div>
+                    <button type="button" onClick={() => setTargetRequest(null)} className="btn-ghost mt-2 mx-auto">Clear</button>
+                  </div>
+                )}
               </div>
               
               <form onSubmit={handleDonationSubmit} className="auth-form">
@@ -314,32 +393,34 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                   </div>
                 </div>
 
-                {/* Expiry Time */}
+                
+
+                {/* Manufacturing Date & Time (MFD) */}
                 <div className="form-group">
-                  <label className="form-label">Expiry Time</label>
+                  <label className="form-label">Manufacturing Date & Time (MFD)</label>
                   <div className="relative">
                     <input
-                      type="text"
-                      name="expiryTime"
-                      placeholder="e.g., Today 6:30 PM, Tomorrow 2:00 PM"
-                      value={donationForm.expiryTime}
+                      type="datetime-local"
+                      name="manufacturingDate"
+                      value={donationForm.manufacturingDate}
                       onChange={handleDonationInputChange}
-                      onFocus={() => setFocusedField('expiryTime')}
+                      onFocus={() => setFocusedField('manufacturingDate')}
                       onBlur={() => setFocusedField(null)}
                       className={`input-field transition-all duration-300 ${
-                        focusedField === 'expiryTime' ? 'scale-105' : ''
+                        focusedField === 'manufacturingDate' ? 'scale-105' : ''
                       }`}
                       style={{
-                        boxShadow: focusedField === 'expiryTime' ? 'var(--shadow-glow)' : undefined
+                        boxShadow: focusedField === 'manufacturingDate' ? 'var(--shadow-glow)' : undefined
                       }}
-                      required
+                      step={60}
                     />
-                    {focusedField === 'expiryTime' && (
+                    {focusedField === 'manufacturingDate' && (
                       <div 
                         className="absolute inset-0 rounded-2xl -z-10"
                         style={{
                           background: 'linear-gradient(135deg, rgba(255, 122, 0, 0.2), rgba(59, 178, 115, 0.2))',
-                          filter: 'blur(1.5rem)'
+                          filter: 'blur(1.5rem)',
+                          pointerEvents: 'none'
                         }}
                       />
                     )}
@@ -394,6 +475,38 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                         <MapPin className="w-5 h-5" />
                       )}
                     </button>
+                  </div>
+                </div>
+
+                {/* Donor Contact Phone */}
+                <div className="form-group">
+                  <label className="form-label">Your Phone (for pickup contact)</label>
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      name="donorPhone"
+                      placeholder="e.g., +919876543210"
+                      value={donationForm.donorPhone}
+                      onChange={handleDonationInputChange}
+                      onFocus={() => setFocusedField('donorPhone')}
+                      onBlur={() => setFocusedField(null)}
+                      className={`input-field transition-all duration-300 ${
+                        focusedField === 'donorPhone' ? 'scale-105' : ''
+                      }`}
+                      style={{
+                        boxShadow: focusedField === 'donorPhone' ? 'var(--shadow-glow)' : undefined
+                      }}
+                      required
+                    />
+                    {focusedField === 'donorPhone' && (
+                      <div 
+                        className="absolute inset-0 rounded-2xl -z-10"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(255, 122, 0, 0.2), rgba(59, 178, 115, 0.2))',
+                          filter: 'blur(1.5rem)'
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -458,6 +571,11 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
   }
 
   if (currentView === 'requests') {
+    // Load when entering this view
+    if (!requestsLoading && requests.length === 0 && !requestsError) {
+      // fire and forget
+      loadRequests();
+    }
     return (
       <div className="min-h-screen bg-warm-gradient relative overflow-hidden">
         <Toast 
@@ -526,16 +644,56 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
               </p>
             </div>
             
-            {/* Empty State */}
+            {/* Requests List */}
             <div className="grid-responsive">
               <div style={{ gridColumn: '1 / -1' }}>
-                <div className="card p-12 text-center animate-scale-in">
-                  <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Users className="w-12 h-12 text-neutral-400" />
+                {requestsLoading ? (
+                  <div className="card p-12 text-center animate-scale-in">
+                    <div className="w-8 h-8 border-2 border-neutral-300 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="dashboard-subtitle">Loading requests...</p>
                   </div>
-                  <h3 className="text-xl font-semibold dashboard-title mb-2">No requests available</h3>
-                  <p className="dashboard-subtitle">Check back later for new food requests from the community.</p>
-                </div>
+                ) : requestsError ? (
+                  <div className="card p-12 text-center animate-scale-in">
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">Could not load requests</h3>
+                    <p className="dashboard-subtitle">{requestsError}</p>
+                  </div>
+                ) : requests.length === 0 ? (
+                  <div className="card p-12 text-center animate-scale-in">
+                    <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Users className="w-12 h-12 text-neutral-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">No requests available</h3>
+                    <p className="dashboard-subtitle">Check back later for new food requests from the community.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {requests.map((req) => (
+                      <div key={req._id} className="card p-6 animate-scale-in">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="text-xl font-semibold dashboard-title mb-2">{req.foodNeeded}</h3>
+                            <p className="dashboard-subtitle mb-1">Requested: {req.quantity}</p>
+                            <p className="dashboard-subtitle mb-1">Remaining: {req.remainingQuantity ?? Math.max(0, (req.numericRequested || 0) - (req.fulfilledQuantity || 0))}</p>
+                            <p className="dashboard-subtitle">Location: {typeof req.location === 'string' ? req.location : req.location?.address}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <span className="badge badge-info">{req.status}</span>
+                            <button
+                              className="btn-secondary text-sm px-4 py-2"
+                              onClick={() => {
+                                setTargetRequest(req);
+                                setDonationForm(prev => ({ ...prev, foodType: req.foodNeeded }));
+                                setCurrentView('donate');
+                              }}
+                            >
+                              Donate to this request
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -741,7 +899,10 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                     <div className="flex-1">
                       <h3 className="text-xl font-semibold dashboard-title mb-2">{donation.foodType}</h3>
                       <p className="dashboard-subtitle mb-2">Quantity: {donation.quantity}</p>
-                      <p className="dashboard-subtitle mb-2">Expiry: {donation.expiryTime}</p>
+                      <p className="dashboard-subtitle mb-2">Manufactured: {donation.manufacturingDate || 'N/A'}</p>
+                      {donation.status === 'claimed' && donation.claimedBy && (
+                        <p className="dashboard-subtitle mb-2">Claimed by: {typeof donation.claimedBy === 'object' ? donation.claimedBy.name || donation.claimedBy.email : donation.claimedBy} {donation.claimantPhone ? `(${donation.claimantPhone})` : ''}</p>
+                      )}
                       <p className="dashboard-subtitle mb-2">Location: {typeof donation.location === 'object' && donation.location !== null && (donation.location as any).address ? (donation.location as any).address : donation.location}</p>
                       <span className="badge badge-info mr-2">{donation.status}</span>
                       {donation.aiQuality && <span className="badge badge-secondary">AI: {donation.aiQuality}</span>}

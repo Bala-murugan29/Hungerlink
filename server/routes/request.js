@@ -6,7 +6,12 @@ const { authenticateToken } = require('../middleware/auth');
 // Create a request
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const request = new Request({ ...req.body, user: req.user._id });
+    const payload = { ...req.body, user: req.user._id };
+    // Ensure location shape
+    if (payload.location && typeof payload.location === 'string') {
+      payload.location = { address: payload.location };
+    }
+    const request = new Request(payload);
     await request.save();
     res.status(201).json({ success: true, request });
   } catch (err) {

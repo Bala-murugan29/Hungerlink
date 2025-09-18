@@ -17,39 +17,40 @@ export class GeminiService {
                 this.model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     }
 
-    async analyzeFoodQuality(
-        foodType: string,
-        expiryTime: string,
-        imageFile?: File
-    ): Promise<FoodQualityResult> {
+        async analyzeFoodQuality(
+                foodType: string,
+                manufacturingDate: string,
+                imageFile?: File
+        ): Promise<FoodQualityResult> {
         try {
-            let prompt = `
-        Analyze the food quality for donation based on the following information:
-        
-        Food Type: ${foodType}
-        Expiry Time: ${expiryTime}
-        Current Time: ${new Date().toLocaleString()}
-        
-        Please evaluate if this food is suitable for donation and provide:
-        1. Quality rating: "fresh", "check", or "not-suitable"
-        2. Confidence level (0-100)
-        3. Specific reasons for your assessment
-        4. Recommendations for the donor
-        
-        Consider factors like:
-        - Time until expiry
-        - Food type and perishability
-        - Safety for consumption
-        - Nutritional value retention
-        
-        Respond in JSON format:
-        {
-          "quality": "fresh|check|not-suitable",
-          "confidence": 85,
-          "reasons": ["reason1", "reason2"],
-          "recommendations": ["rec1", "rec2"]
-        }
-      `;
+                        let prompt = `
+                Analyze the food quality for donation based on the following information:
+
+                Food Type: ${foodType}
+                Manufacturing Date/Time: ${manufacturingDate}
+                Current Time: ${new Date().toLocaleString()}
+
+                Please evaluate if this food is suitable for donation and provide:
+                1. Quality rating: "fresh", "check", or "not-suitable"
+                2. Confidence level (0-100)
+                3. Specific reasons for your assessment
+                4. Recommendations for the donor
+                5. Use the manufacturing date/time together with the food type and image to determine freshness and safety.
+
+                Consider factors like:
+                - Time since manufacturing
+                - Food type and perishability
+                - Visual spoilage indicators in the image
+                - Safety for consumption
+
+                Respond in JSON format:
+                {
+                    "quality": "fresh|check|not-suitable",
+                    "confidence": 85,
+                    "reasons": ["reason1", "reason2"],
+                    "recommendations": ["rec1", "rec2"]
+                }
+            `;
 
             let parts: any[] = [{ text: prompt }];
 
@@ -91,11 +92,11 @@ export class GeminiService {
             }
 
             // Fallback if JSON parsing fails
-            return this.getFallbackAnalysis(foodType, expiryTime);
+            return this.getFallbackAnalysis(foodType, manufacturingDate);
 
         } catch (error) {
             console.error('Gemini analysis error:', error);
-            return this.getFallbackAnalysis(foodType, expiryTime);
+            return this.getFallbackAnalysis(foodType, manufacturingDate);
         }
     }
 
@@ -111,32 +112,75 @@ export class GeminiService {
         });
     }
 
-    private getFallbackAnalysis(foodType: string, expiryTime: string): FoodQualityResult {
-        // Simple fallback logic
-        const now = new Date();
-        const isToday = expiryTime.toLowerCase().includes('today');
-        const isTomorrow = expiryTime.toLowerCase().includes('tomorrow');
+    private getFallbackAnalysis(foodType: string, manufacturingDate: string): FoodQualityResult {
+        // Best-effort fallback using manufacturing date/time
+        // manufacturingDate is expected as an ISO-like string (e.g. 2025-09-18T14:30)
+        try {
+            const now = new Date();
+            const mfd = manufacturingDate ? new Date(manufacturingDate) : null;
+            if (!mfd || isNaN(mfd.getTime())) {
+                return {
+                    quality: 'check',
+                    confidence: 55,
+                    reasons: ['No valid manufacturing date provided'],
+                    recommendations: ['Provide manufacturing date or a photo for better analysis']
+                };
+            }
 
-        if (isToday) {
-            return {
-                quality: 'fresh',
-                confidence: 80,
-                reasons: ['Food expires today - good for immediate consumption'],
-                recommendations: ['Distribute as soon as possible', 'Ensure proper storage until pickup']
+            const hoursSince = Math.max(0, (now.getTime() - mfd.getTime()) / (1000 * 60 * 60));
+
+            // Rough perishability map (hours until high risk at room temp)
+            const perishability: Record<string, number> = {
+                'cooked rice': 6,
+                'cooked food': 8,
+                'meat': 24,
+                'fish': 24,
+                'dairy': 48,
+                'vegetables': 72,
+                'fruits': 72,
+                'bread': 72,
+                'default': 48
             };
-        } else if (isTomorrow) {
+
+            const key = (foodType || '').toLowerCase();
+            let threshold = perishability['default'];
+            for (const k of Object.keys(perishability)) {
+                if (k !== 'default' && key.includes(k.split(' ')[0])) {
+                    threshold = perishability[k];
+                    break;
+                }
+            }
+
+            if (hoursSince <= Math.max(6, threshold * 0.25)) {
+                return {
+                    quality: 'fresh',
+                    confidence: Math.min(95, 70 + (threshold - hoursSince)),
+                    reasons: [`Manufactured ${Math.round(hoursSince)} hours ago; within safe window for this food type`],
+                    recommendations: ['Safe for donation; distribute soon', 'Keep refrigerated if applicable']
+                };
+            }
+
+            if (hoursSince <= threshold) {
+                return {
+                    quality: 'check',
+                    confidence: Math.max(50, 70 - (hoursSince / threshold) * 30),
+                    reasons: [`Manufactured ${Math.round(hoursSince)} hours ago; may still be OK depending on storage`],
+                    recommendations: ['Verify smell and appearance', 'Keep chilled and deliver quickly']
+                };
+            }
+
             return {
-                quality: 'fresh',
-                confidence: 85,
-                reasons: ['Food has good shelf life remaining'],
-                recommendations: ['Safe for donation', 'Store in appropriate conditions']
+                quality: 'not-suitable',
+                confidence: 90,
+                reasons: [`Manufactured ${Math.round(hoursSince)} hours ago; likely beyond safe window for donation`],
+                recommendations: ['Do not donate if spoiled', 'Dispose safely if in doubt']
             };
-        } else {
+        } catch (e) {
             return {
                 quality: 'check',
-                confidence: 60,
-                reasons: ['Please verify expiry time and food condition'],
-                recommendations: ['Check food quality before donation', 'Ensure food safety standards']
+                confidence: 50,
+                reasons: ['Unable to evaluate manufacturing date'],
+                recommendations: ['Provide photo and clear manufacturing date/time']
             };
         }
     }

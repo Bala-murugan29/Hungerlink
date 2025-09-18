@@ -296,10 +296,10 @@ body {
 .text-neutral-700 { color: var(--neutral-700) !important; }
 .text-neutral-800 { color: var(--neutral-800) !important; }
 .text-neutral-900 { color: var(--neutral-900) !important; }
-.text-success { color: var(--success); }
-.text-error { color: var(--error); }
-.text-warning { color: var(--warning); }
-.text-info { color: var(--info); }
+.text-success { color: var(--success) !important; }
+.text-error { color: var(--error) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-info { color: var(--info) !important; }
 
 .bg-white { background-color: #ffffff; }
 .bg-primary-50 { background-color: var(--primary-50); }
@@ -695,14 +695,32 @@ body {
 
 .toast-success {
   border-left: 4px solid var(--success);
+  color: green;
 }
 
 .toast-error {
   border-left: 4px solid var(--error);
+  color: red;
 }
 
 .toast-warning {
   border-left: 4px solid var(--warning);
+  color: orange;
+}
+
+.toast-info {
+  border-left: 4px solid var(--info);;
+}
+
+/* Toast message and icon color (override white) */
+.toast-message {
+  color: var(--neutral-900);
+  font-weight: 600;
+}
+
+.toast svg,
+.toast-close {
+  color: var(--neutral-900);
 }
 
 /* Divider */

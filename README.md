@@ -226,6 +226,7 @@ MONGODB_URI=mongodb+srv://<user>:<pass>@<cluster>/<db>?retryWrites=true&w=majori
 JWT_SECRET=your-32-char-secret
 FRONTEND_URL=http://localhost:5173
 NODE_ENV=development
+VITE_GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
 ### 3) Run

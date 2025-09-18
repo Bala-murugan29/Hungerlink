@@ -9,21 +9,24 @@ interface RecipientDashboardProps {
 }
 
 interface Request {
-  id: string;
+  _id: string;
   foodNeeded: string;
   quantity: string;
-  location: string;
-  ngoId?: string;
-  status: 'pending' | 'accepted' | 'fulfilled';
-  acceptedBy?: string;
+  location: { address: string } | string;
+  requesterType?: 'ngo' | 'individual';
+  status: 'open' | 'accepted' | 'fulfilled';
   createdAt: string;
+  numericRequested?: number;
+  fulfilledQuantity?: number;
+  remainingQuantity?: number;
 }
 
 interface Donation {
   _id: string;
   foodType: string;
   quantity: string;
-  expiryTime: string;
+  // expiryTime removed in favor of manufacturingDate
+  manufacturingDate?: string;
   location: { address: string; coordinates?: any } | string;
   photo?: string;
   status: 'available' | 'claimed' | 'completed';
@@ -31,6 +34,7 @@ interface Donation {
   claimedBy?: string;
   createdAt: string;
   user?: any;
+  request?: any | null;
 }
 
 const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout }) => {
@@ -41,6 +45,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
   const [donationsLoading, setDonationsLoading] = useState(false);
   const [donationsError, setDonationsError] = useState<string | null>(null);
   const [claimingDonationId, setClaimingDonationId] = useState<string | null>(null);
+  const [claimPhoneByDonation, setClaimPhoneByDonation] = useState<Record<string, string>>({});
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
@@ -49,8 +54,9 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
   const [requestForm, setRequestForm] = useState({
     foodNeeded: '',
     quantity: '',
-    location: user?.location?.address || '',
-    ngoId: user?.role === 'ngo' ? user?.ngoDetails?.registrationId || '' : ''
+  location: user?.location?.address || '',
+  ngoId: user?.role === 'ngo' ? user?.ngoDetails?.registrationId || '' : '',
+  requesterPhone: user?.phone || ''
   });
 
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -68,8 +74,19 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
   }, [currentView]);
 
   const loadRequests = async () => {
-    // Start with empty array - no sample data
-    setRequests([]);
+    try {
+      const token = localStorage.getItem('hungerlink_token');
+      const res = await fetch(`${API_BASE}/api/requests/my`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) throw new Error('Failed to fetch requests');
+      const data = await res.json();
+      setRequests(data.requests || []);
+    } catch (e) {
+      setRequests([]);
+    }
   };
 
   const loadDonations = async () => {
@@ -80,7 +97,8 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
       if (response.ok) {
         const data = await response.json();
         const list = Array.isArray(data) ? data : (data?.donations || []);
-        setDonations(list);
+        const filtered = list.filter((d: any) => (!d.request) && d.status === 'available');
+        setDonations(filtered);
       } else {
         console.error('Failed to load donations');
         setDonationsError('Failed to load donations');
@@ -134,24 +152,32 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
     setIsLoading(true);
 
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const newRequest: Request = {
-        id: Date.now().toString(),
+      const token = localStorage.getItem('hungerlink_token');
+      const payload = {
         foodNeeded: requestForm.foodNeeded,
         quantity: requestForm.quantity,
-        location: requestForm.location,
-        ngoId: requestForm.ngoId || undefined,
-        status: 'pending',
-        createdAt: new Date().toISOString()
+        location: { address: requestForm.location },
+  requesterPhone: requestForm.requesterPhone,
+        requesterType: user?.role === 'ngo' ? 'ngo' : 'individual',
       };
-
-      setRequests(prev => [newRequest, ...prev]);
+      const res = await fetch(`${API_BASE}/api/requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to post request');
+      }
+      const { request: saved } = await res.json();
+      setRequests(prev => [saved, ...prev]);
 
       setToast({
         show: true,
-        message: '✅ Request posted successfully.',
+  message: '✅ Request posted successfully.',
         type: 'success'
       });
 
@@ -159,11 +185,12 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
       setRequestForm({
         foodNeeded: '',
         quantity: '',
-        location: user?.location?.address || '',
-        ngoId: user?.role === 'ngo' ? user?.ngoDetails?.registrationId || '' : ''
+  location: user?.location?.address || '',
+  ngoId: user?.role === 'ngo' ? user?.ngoDetails?.registrationId || '' : '',
+  requesterPhone: user?.phone || ''
       });
 
-      setCurrentView('dashboard');
+  setCurrentView('dashboard');
 
     } catch (error) {
       setToast({
@@ -186,13 +213,14 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
 
     try {
       const token = localStorage.getItem('hungerlink_token');
+      const phone = claimPhoneByDonation[donationId] || user?.phone || '';
       const response = await fetch(`${API_BASE}/api/donations/${donationId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status: 'claimed', claimedBy: user._id })
+        body: JSON.stringify({ status: 'claimed', claimedBy: user._id, claimantPhone: phone })
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -236,7 +264,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
       if (aiQuality === 'not-suitable') return <span className="badge badge-error">❌ Not Suitable</span>;
     }
     
-    if (status === 'pending') return <span className="badge badge-warning">Pending</span>;
+  if (status === 'open') return <span className="badge badge-warning">Open</span>;
     if (status === 'accepted') return <span className="badge badge-success">Accepted</span>;
     if (status === 'fulfilled') return <span className="badge badge-success">Fulfilled</span>;
     if (status === 'available') return <span className="badge badge-info">Available</span>;
@@ -607,7 +635,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                               <div>
                                 <h3 className="text-xl font-semibold dashboard-title mb-2">{donation.foodType}</h3>
                                 <p className="dashboard-subtitle mb-2">Quantity: {donation.quantity}</p>
-                                <p className="dashboard-subtitle mb-2">Expires: {donation.expiryTime}</p>
+                                <p className="dashboard-subtitle mb-2">Manufactured: {donation.manufacturingDate || 'N/A'}</p>
                                 <p className="dashboard-subtitle">
                                   Location: {typeof donation.location === 'string' 
                                     ? donation.location 
@@ -617,24 +645,35 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                               <div className="flex flex-col gap-2">
                                 {getStatusBadge(donation.status, donation.aiQuality)}
                                 { (donation.status === 'available' || claimingDonationId === donation._id) && (
-                                  // show button when available; when claimingDonationId matches this donation we show disabled state
-                                  donation.status === 'available' ? (
-                                    <button
-                                      onClick={() => handleClaimDonation(donation._id)}
-                                      className="btn-secondary text-sm px-4 py-2"
-                                      disabled={!!claimingDonationId}
-                                    >
-                                      {claimingDonationId === donation._id ? 'Claiming...' : 'Claim Food'}
-                                    </button>
-                                  ) : (
-                                    // if donation.status is not 'available' but this donation is currently being claimed optimistically,
-                                    // show a disabled button or the claimed badge
-                                    claimingDonationId === donation._id ? (
-                                      <button className="btn-secondary text-sm px-4 py-2 opacity-70 cursor-not-allowed" disabled>
-                                        Claiming...
-                                      </button>
-                                    ) : null
-                                  )
+                                  <div>
+                                    {donation.status === 'available' ? (
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="tel"
+                                          placeholder="Your phone for pickup"
+                                          value={claimPhoneByDonation[donation._id] ?? user?.phone ?? ''}
+                                          onChange={(e) => setClaimPhoneByDonation(prev => ({ ...prev, [donation._id]: e.target.value }))}
+                                          className="input-field text-sm"
+                                          style={{ width: '10rem' }}
+                                        />
+                                        <button
+                                          onClick={() => handleClaimDonation(donation._id)}
+                                          className="btn-secondary text-sm px-4 py-2"
+                                          disabled={!!claimingDonationId}
+                                        >
+                                          {claimingDonationId === donation._id ? 'Claiming...' : 'Claim Food'}
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      // if donation.status is not 'available' but this donation is currently being claimed optimistically,
+                                      // show a disabled button or the claimed badge
+                                      claimingDonationId === donation._id ? (
+                                        <button className="btn-secondary text-sm px-4 py-2 opacity-70 cursor-not-allowed" disabled>
+                                          Claiming...
+                                        </button>
+                                      ) : null
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -804,7 +843,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
               >
                 <Users className="w-6 h-6 text-warning" />
               </div>
-              <h3 className="stats-number">{requests.filter(r => r.status === 'pending').length}</h3>
+              <h3 className="stats-number">{requests.filter(r => r.status === 'open').length}</h3>
               <p className="stats-label">Active Requests</p>
             </div>
           </div>
@@ -821,19 +860,37 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
             
             <div className="grid-responsive">
               <div style={{ gridColumn: '1 / -1' }}>
-                <div className="card p-12 text-center">
-                  <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Heart className="w-12 h-12 text-neutral-400" />
+                {requests.length === 0 ? (
+                  <div className="card p-12 text-center">
+                    <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Heart className="w-12 h-12 text-neutral-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">No requests yet</h3>
+                    <p className="dashboard-subtitle mb-6">Start by posting your first food request to get help from the community.</p>
+                    <button 
+                      onClick={() => setCurrentView('request')}
+                      className="btn-primary"
+                    >
+                      Post Your First Request
+                    </button>
                   </div>
-                  <h3 className="text-xl font-semibold dashboard-title mb-2">No requests yet</h3>
-                  <p className="dashboard-subtitle mb-6">Start by posting your first food request to get help from the community.</p>
-                  <button 
-                    onClick={() => setCurrentView('request')}
-                    className="btn-primary"
-                  >
-                    Post Your First Request
-                  </button>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    {requests.map((req) => (
+                      <div key={req._id} className="card p-6 flex items-start justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold dashboard-title">{req.foodNeeded}</h3>
+                          <p className="dashboard-subtitle">Quantity: {req.quantity} • Remaining: {req.remainingQuantity ?? Math.max(0, (req.numericRequested || 0) - (req.fulfilledQuantity || 0))}</p>
+                          <p className="dashboard-subtitle">Location: {typeof req.location === 'string' ? req.location : req.location?.address}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          {getStatusBadge(req.status)}
+                          <span className="text-xs text-neutral-500">{new Date(req.createdAt).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
