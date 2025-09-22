@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles } from 'lucide-react';
 import Logo from './Logo';
 
@@ -8,6 +9,7 @@ interface LoginPageProps {
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     emailOrPhone: '',
     password: ''
@@ -120,9 +122,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess
         {/* Logo Section */}
         <div className="text-center mb-12 animate-slide-down">
           <Logo size="lg" animated={true} />
-          <p className="mt-4 text-neutral-600 font-medium">
-            Welcome back! Sign in to continue your journey.
-          </p>
+          <p className="mt-4 text-neutral-600 font-medium">{t('auth.welcomeBack')}</p>
         </div>
         
         {/* Login Card */}
@@ -132,13 +132,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess
             <div className="form-group">
               <label className="form-label flex items-center gap-2">
                 <Mail className="w-4 h-4 text-primary-500" />
-                Email or Phone
+                {t('auth.emailOrPhone')}
               </label>
               <div className="relative">
                 <input
                   type="text"
                   name="emailOrPhone"
-                  placeholder="Enter your email or phone number"
+                  placeholder={t('auth.emailOrPhonePlaceholder')}
                   value={formData.emailOrPhone}
                   onChange={handleInputChange}
                   onFocus={() => setFocusedField('emailOrPhone')}
@@ -167,13 +167,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess
             <div className="form-group">
               <label className="form-label flex items-center gap-2">
                 <Lock className="w-4 h-4 text-primary-500" />
-                Password
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
-                  placeholder="Enter your password"
+                  placeholder={t('auth.passwordPlaceholder')}
                   value={formData.password}
                   onChange={handleInputChange}
                   onFocus={() => setFocusedField('password')}
@@ -214,7 +214,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess
               </div>
             )}
             
-            {/* Login Button */}
+    {/* Login Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -225,11 +225,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
-                  Signing in...
+      {t('common.loading')}
                 </>
               ) : (
                 <>
-                  Sign In
+      {t('auth.login')}
                   <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                 </>
               )}
@@ -238,7 +238,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess
           
           {/* Divider */}
           <div className="divider">
-            <span className="divider-text">New to HungerLink?</span>
+            <span className="divider-text">{t('auth.alreadyHaveAccount')}</span>
           </div>
           
           {/* Signup Link */}
@@ -246,7 +246,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess
             onClick={onNavigateToSignup}
             className="w-full btn-ghost group flex items-center justify-center gap-2"
           >
-            Create an account
+            {t('auth.signup')}
             <Sparkles className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </button>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, MapPin, Upload, CheckCircle, User, Mail, Lock, Building, Users, Sparkles, ArrowRight } from 'lucide-react';
 import Logo from './Logo';
 import Toast from './Toast';
@@ -11,6 +12,7 @@ interface SignupPageProps {
 type UserRole = 'donor' | 'recipient' | 'ngo';
 
 const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSuccess }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     emailOrPhone: '',
@@ -273,13 +275,13 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
             <div className="form-group">
               <label className="form-label flex items-center gap-2">
                 <User className="w-4 h-4 text-primary-500" />
-                Full Name
+                {t('auth.fullName')}
               </label>
               <div className="relative">
                 <input
                   type="text"
                   name="name"
-                  placeholder="Enter your full name"
+                  placeholder={t('auth.fullNamePlaceholder')}
                   value={formData.name}
                   onChange={handleInputChange}
                   onFocus={() => setFocusedField('name')}
@@ -309,13 +311,13 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
             <div className="form-group">
               <label className="form-label flex items-center gap-2">
                 <Mail className="w-4 h-4 text-primary-500" />
-                Email or Phone
+                {t('auth.emailOrPhone')}
               </label>
               <div className="relative">
                 <input
                   type="text"
                   name="emailOrPhone"
-                  placeholder="Enter your email or phone number"
+                  placeholder={t('auth.emailOrPhonePlaceholder')}
                   value={formData.emailOrPhone}
                   onChange={handleInputChange}
                   onFocus={() => setFocusedField('emailOrPhone')}
@@ -345,13 +347,13 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
             <div className="form-group">
               <label className="form-label flex items-center gap-2">
                 <Lock className="w-4 h-4 text-primary-500" />
-                Password
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
-                  placeholder="Create a strong password (min 6 characters)"
+                  placeholder={t('auth.createPassword')}
                   value={formData.password}
                   onChange={handleInputChange}
                   onFocus={() => setFocusedField('password')}
@@ -388,7 +390,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
             
             {/* Role Selection */}
             <div className="form-group">
-              <label className="form-label">Choose Your Role</label>
+              <label className="form-label">{t('role.choose')}</label>
               <div className="grid grid-cols-1 gap-3">
                 {(['donor', 'recipient', 'ngo'] as UserRole[]).map((role) => (
                   <label
@@ -396,13 +398,13 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
                     className={`
                       relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300
                       ${formData.role === role 
-                        ? 'border-primary-500 bg-primary-50' 
-                        : 'border-neutral-200 bg-white hover:border-primary-300'
+                        ? 'border-primary-500 bg-primary-500 text-white' 
+                        : 'border-neutral-200 bg-white hover:border-primary-300'}
                       }
                     `}
                     style={{
                       boxShadow: formData.role === role ? 'var(--shadow-glow)' : undefined,
-                      backgroundColor: formData.role === role ? 'var(--primary-50)' : undefined
+                      backgroundColor: formData.role === role ? 'var(--primary-500)' : undefined
                     }}
                   >
                     <input
@@ -417,22 +419,23 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
                       <div 
                         className={`
                           p-2 rounded-xl transition-colors duration-300
-                          ${formData.role === role ? 'bg-primary-500 text-white' : 'bg-neutral-100 text-neutral-600'}
+                          ${formData.role === role ? 'text-white' : 'bg-neutral-100 text-neutral-600'}
                         `}
+                        style={formData.role === role ? { backgroundColor: 'rgba(255,255,255,0.15)' } : undefined}
                       >
                         {getRoleIcon(role)}
                       </div>
                       <div>
-                        <div className="font-semibold text-neutral-900" style={{ textTransform: 'capitalize' }}>
-                          {role === 'ngo' ? 'NGO' : role}
+                        <div className={`font-semibold ${formData.role === role ? 'text-white' : 'text-neutral-900'}`} style={{ textTransform: 'capitalize' }}>
+                          {t(`role.${role}.title`)}
                         </div>
-                        <div className="text-sm text-neutral-600">
-                          {getRoleDescription(role)}
+                        <div className={`text-sm ${formData.role === role ? 'text-white opacity-80' : 'text-neutral-600'}`}>
+                          {t(`role.${role}.desc`)}
                         </div>
                       </div>
                     </div>
                     {formData.role === role && (
-                      <CheckCircle className="w-5 h-5 text-primary-500" />
+                      <CheckCircle className="w-5 h-5 text-white" />
                     )}
                   </label>
                 ))}
@@ -479,7 +482,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
                   disabled={isGettingLocation}
                   className="btn-secondary flex-shrink-0"
                   style={{ padding: 'var(--space-4)' }}
-                  title="Use my GPS location"
+                  title={t('auth.useMyLocation')}
                 >
                   {isGettingLocation ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
@@ -553,11 +556,11 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
-                  Creating Account...
+                  {t('donation.posting')}
                 </>
               ) : (
                 <>
-                  Create Account
+                  {t('auth.signup')}
                   <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                 </>
               )}
@@ -566,7 +569,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
           
           {/* Divider */}
           <div className="divider">
-            <span className="divider-text">Already have an account?</span>
+            <span className="divider-text">{t('auth.alreadyHaveAccount')}</span>
           </div>
           
           {/* Login Link */}
@@ -574,7 +577,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
             onClick={onNavigateToLogin}
             className="w-full btn-ghost group flex items-center justify-center gap-2"
           >
-            Sign in instead
+            {t('auth.signInInstead')}
             <Sparkles className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </button>
         </div>

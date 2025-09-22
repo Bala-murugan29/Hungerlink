@@ -3,6 +3,7 @@ import LoginPage from './LoginPage';
 import SignupPage from './SignupPage';
 import DonorDashboard from './DonorDashboard';
 import RecipientDashboard from './RecipientDashboard';
+import LanguageButton from './components/LanguageButton';
 
 type AuthState = 'login' | 'signup' | 'authenticated';
 
@@ -28,16 +29,15 @@ interface User {
 function App() {
   const [authState, setAuthState] = useState<AuthState>('login');
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  // const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     // Check for existing auth token on app load
     const savedToken = localStorage.getItem('hungerlink_token');
     const savedUser = localStorage.getItem('hungerlink_user');
     
-    if (savedToken && savedUser) {
+  if (savedToken && savedUser) {
       try {
-        setToken(savedToken);
         setUser(JSON.parse(savedUser));
         setAuthState('authenticated');
       } catch (error) {
@@ -53,7 +53,7 @@ function App() {
     
     if (authData.success && authData.user && authData.token) {
       setUser(authData.user);
-      setToken(authData.token);
+      // setToken(authData.token);
       setAuthState('authenticated');
       
       // Save to localStorage
@@ -64,7 +64,7 @@ function App() {
 
   const handleLogout = () => {
     setUser(null);
-    setToken(null);
+    // setToken(null);
     setAuthState('login');
     
     // Clear localStorage
@@ -72,28 +72,35 @@ function App() {
     localStorage.removeItem('hungerlink_user');
   };
 
-  if (authState === 'authenticated' && user) {
-    if (user.role === 'donor') {
-      return <DonorDashboard user={user} onLogout={handleLogout} />;
-    } else if (user.role === 'recipient' || user.role === 'ngo') {
-      return <RecipientDashboard user={user} onLogout={handleLogout} />;
-    }
-  }
+  let content: React.ReactNode = (
+    <LoginPage
+      onNavigateToSignup={() => setAuthState('signup')}
+      onAuthSuccess={handleAuthSuccess}
+    />
+  );
 
   if (authState === 'signup') {
-    return (
-      <SignupPage 
+    content = (
+      <SignupPage
         onNavigateToLogin={() => setAuthState('login')}
         onAuthSuccess={handleAuthSuccess}
       />
     );
   }
 
+  if (authState === 'authenticated' && user) {
+    if (user.role === 'donor') {
+      content = <DonorDashboard user={user} onLogout={handleLogout} />;
+    } else if (user.role === 'recipient' || user.role === 'ngo') {
+      content = <RecipientDashboard user={user} onLogout={handleLogout} />;
+    }
+  }
+
   return (
-    <LoginPage 
-      onNavigateToSignup={() => setAuthState('signup')}
-      onAuthSuccess={handleAuthSuccess}
-    />
+    <>
+      <LanguageButton />
+      {content}
+    </>
   );
 }
 

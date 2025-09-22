@@ -3,6 +3,8 @@ import { Plus, Eye, Clock, MapPin, Camera, Upload, CheckCircle, ArrowLeft, Spark
 import Logo from './Logo';
 import Toast from './Toast';
 import { FoodQualityResult, geminiService } from './services/geminiService';
+import { useTranslation } from 'react-i18next';
+import AIInsights from './components/AIInsights';
 interface DonorDashboardProps {
   user: any;
   onLogout: () => void;
@@ -97,11 +99,13 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
   };
 
   // Map AI quality to a clear badge like in Recipient view
+  const { t, i18n } = useTranslation();
+
   const getAiBadge = (quality?: 'fresh' | 'check' | 'not-suitable') => {
     if (!quality) return null;
-    if (quality === 'fresh') return <span className="badge badge-success">✅ Fresh</span>;
-    if (quality === 'check') return <span className="badge badge-warning">⚠️ Check</span>;
-    if (quality === 'not-suitable') return <span className="badge badge-error">❌ Not Suitable</span>;
+    if (quality === 'fresh') return <span className="badge badge-success">✅ {t('quality.fresh')}</span>;
+    if (quality === 'check') return <span className="badge badge-warning">⚠️ {t('quality.check')}</span>;
+    if (quality === 'not-suitable') return <span className="badge badge-error">❌ {t('quality.notSuitable')}</span>;
     return null;
   };
 
@@ -157,7 +161,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
     } catch (error) {
       setToast({
         show: true,
-        message: 'Unable to get location. Please enter manually.',
+        message: t('errors.locationFailed'),
         type: 'error'
       });
     } finally {
@@ -179,7 +183,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
         const donateQty = extractNumber(donationForm.quantity);
         const remaining = targetRequest.remainingQuantity ?? Math.max(0, (targetRequest.numericRequested || extractNumber(targetRequest.quantity)) - (targetRequest.fulfilledQuantity || 0));
         if (donateQty > remaining) {
-          throw new Error(`Donation exceeds remaining need (${donateQty} > ${remaining}). Please reduce the quantity.`);
+          throw new Error(t('donor.exceedsRemaining', { donateQty, remaining }));
         }
       }
 
@@ -189,7 +193,8 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
         aiResult = await geminiService.analyzeFoodQuality(
           donationForm.foodType,
           donationForm.manufacturingDate,
-          donationForm.photo || undefined
+          donationForm.photo || undefined,
+          i18n.language
         );
       } catch {}
 
@@ -219,13 +224,13 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to post donation');
+        throw new Error(errorData.message || t('donor.postError'));
       }
 
   // Removed unused result variable
       setToast({
         show: true,
-        message: `🎉 Donation posted successfully${aiResult?.quality ? ` (AI: ${aiResult.quality})` : ''}!`,
+        message: t('donor.postSuccess'),
         type: 'success'
       });
 
@@ -248,7 +253,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
     } catch (error: any) {
       setToast({
         show: true,
-        message: error.message || 'Failed to post donation. Please try again.',
+        message: error.message || t('donor.postError'),
         type: 'error'
       });
     } finally {
@@ -261,6 +266,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
 
   // Removed unused getStatusBadge
 
+  // t/i18n already initialized above
   if (currentView === 'donate') {
     return (
       <div className="min-h-screen bg-warm-gradient relative overflow-hidden">
@@ -312,7 +318,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                 className="back-button group"
               >
                 <ArrowLeft className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1" />
-                <span className="text-dark">Back</span>
+                <span className="text-dark">{t('common.back')}</span>
               </button>
               <Logo size="sm" />
             </div>
@@ -324,16 +330,16 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                   <Camera className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-3xl font-display font-bold text-gradient mb-2">
-                  🥘 Donate Food
+                  🥘 {t('donor.donateFood')}
                 </h2>
                 <p className="dashboard-subtitle">
-                  Share your surplus food with those who need it most
+                  {t('donor.subtitle')}
                 </p>
                 {targetRequest && (
                   <div className="mt-4 p-4 bg-secondary-50 border-2 border-secondary-200 rounded-2xl text-center">
-                    <div className="font-semibold text-error text-xl">Fulfilling Request: {targetRequest.foodNeeded}</div>
-                    <div className="text-sm text-error">Remaining needed: {targetRequest.remainingQuantity ?? Math.max(0, (targetRequest.numericRequested || 0) - (targetRequest.fulfilledQuantity || 0))}</div>
-                    <button type="button" onClick={() => setTargetRequest(null)} className="btn-ghost mt-2 mx-auto">Clear</button>
+                    <div className="font-semibold text-error text-xl">{t('donor.fulfilling')}: {targetRequest.foodNeeded}</div>
+                    <div className="text-sm text-error">{t('donor.remaining')}: {targetRequest.remainingQuantity ?? Math.max(0, (targetRequest.numericRequested || 0) - (targetRequest.fulfilledQuantity || 0))}</div>
+                    <button type="button" onClick={() => setTargetRequest(null)} className="btn-ghost mt-2 mx-auto">{t('common.clear')}</button>
                   </div>
                 )}
               </div>
@@ -341,12 +347,12 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
               <form onSubmit={handleDonationSubmit} className="auth-form">
                 {/* Food Type */}
                 <div className="form-group">
-                  <label className="form-label">Food Type</label>
+                  <label className="form-label">{t('form.foodType')}</label>
                   <div className="relative">
                     <input
                       type="text"
                       name="foodType"
-                      placeholder="e.g., Vegetable Biryani, Mixed Rice"
+                      placeholder={t('placeholder.foodType')}
                       value={donationForm.foodType}
                       onChange={handleDonationInputChange}
                       onFocus={() => setFocusedField('foodType')}
@@ -373,12 +379,12 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
 
                 {/* Quantity */}
                 <div className="form-group">
-                  <label className="form-label">Quantity</label>
+                  <label className="form-label">{t('form.quantity')}</label>
                   <div className="relative">
                     <input
                       type="text"
                       name="quantity"
-                      placeholder="e.g., 40 plates, 25 portions"
+                      placeholder={t('placeholder.quantity')}
                       value={donationForm.quantity}
                       onChange={handleDonationInputChange}
                       onFocus={() => setFocusedField('quantity')}
@@ -407,7 +413,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
 
                 {/* Manufacturing Date & Time (MFD) */}
                 <div className="form-group">
-                  <label className="form-label">Manufacturing Date & Time (MFD)</label>
+                  <label className="form-label">{t('form.mfd')}</label>
                   <div className="relative">
                     <input
                       type="datetime-local"
@@ -441,14 +447,14 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                 <div className="form-group">
                   <label className="form-label flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-primary-500" />
-                    Location
+                    {t('common.location')}
                   </label>
                   <div className="flex gap-3">
                     <div className="relative flex-1">
                       <input
                         type="text"
                         name="location"
-                        placeholder="Enter pickup location"
+                        placeholder={t('placeholder.pickupLocation')}
                         value={donationForm.location}
                         onChange={handleDonationInputChange}
                         onFocus={() => setFocusedField('location')}
@@ -477,7 +483,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                       disabled={isGettingLocation}
                       className="btn-secondary flex-shrink-0"
                       style={{ padding: 'var(--space-4)' }}
-                      title="Use my GPS location"
+                      title={t('auth.useMyLocation')}
                     >
                       {isGettingLocation ? (
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
@@ -558,16 +564,16 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                   {isProcessingAI ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
-                      🤖 Analyzing with Gemini...
+                      🤖 {t('ai.analyzing')}
                     </>
                   ) : isLoading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
-                      Posting...
+                      {t('donation.posting')}
                     </>
                   ) : (
                     <>
-                      Post Donation
+                      {t('donation.post')}
                       <Heart className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                     </>
                   )}
@@ -636,7 +642,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                 className="back-button group"
               >
                 <ArrowLeft className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1" />
-                <span className="text-dark">Back</span>
+                <span className="text-dark">{t('common.back')}</span>
               </button>
               <Logo size="sm" />
             </div>
@@ -647,10 +653,10 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                 <Users className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-3xl font-display font-bold text-gradient mb-2">
-                📋 Food Requests
+                📋 {t('donor.requestsTitle')}
               </h2>
               <p className="dashboard-subtitle">
-                Help fulfill requests from those in need
+                {t('donor.requestsSubtitle')}
               </p>
             </div>
             
@@ -660,11 +666,11 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                 {requestsLoading ? (
                   <div className="card p-12 text-center animate-scale-in">
                     <div className="w-8 h-8 border-2 border-neutral-300 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="dashboard-subtitle">Loading requests...</p>
+                    <p className="dashboard-subtitle">{t('common.loading')}</p>
                   </div>
                 ) : requestsError ? (
                   <div className="card p-12 text-center animate-scale-in">
-                    <h3 className="text-xl font-semibold dashboard-title mb-2">Could not load requests</h3>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">{t('donor.couldNotLoad')}</h3>
                     <p className="dashboard-subtitle">{requestsError}</p>
                   </div>
                 ) : requests.length === 0 ? (
@@ -672,8 +678,8 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                     <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Users className="w-12 h-12 text-neutral-400" />
                     </div>
-                    <h3 className="text-xl font-semibold dashboard-title mb-2">No requests available</h3>
-                    <p className="dashboard-subtitle">Check back later for new food requests from the community.</p>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">{t('donor.noRequests')}</h3>
+                    <p className="dashboard-subtitle">{t('donor.noRequestsHint')}</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -682,9 +688,9 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                         <div className="flex items-start justify-between">
                           <div>
                             <h3 className="text-xl font-semibold dashboard-title mb-2">{req.foodNeeded}</h3>
-                            <p className="dashboard-subtitle mb-1">Requested: {req.quantity}</p>
-                            <p className="dashboard-subtitle mb-1">Remaining: {req.remainingQuantity ?? Math.max(0, (req.numericRequested || 0) - (req.fulfilledQuantity || 0))}</p>
-                            <p className="dashboard-subtitle">Location: {typeof req.location === 'string' ? req.location : req.location?.address}</p>
+                            <p className="dashboard-subtitle mb-1">{t('donor.requested')}: {req.quantity}</p>
+                            <p className="dashboard-subtitle mb-1">{t('donor.remaining')}: {req.remainingQuantity ?? Math.max(0, (req.numericRequested || 0) - (req.fulfilledQuantity || 0))}</p>
+                            <p className="dashboard-subtitle">{t('common.location')}: {typeof req.location === 'string' ? req.location : req.location?.address}</p>
                           </div>
                           <div className="flex flex-col items-end gap-2">
                             <span className="badge badge-info">{req.status}</span>
@@ -696,7 +702,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                                 setCurrentView('donate');
                               }}
                             >
-                              Donate to this request
+                              {t('donor.donateToRequest')}
                             </button>
                           </div>
                         </div>
@@ -916,6 +922,8 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                       <p className="dashboard-subtitle mb-2">Location: {typeof donation.location === 'object' && donation.location !== null && (donation.location as any).address ? (donation.location as any).address : donation.location}</p>
                       <span className="badge badge-info mr-2">{donation.status}</span>
                       {getAiBadge(donation.aiQuality)}
+                      {/* AI Insights localized */}
+                      <AIInsights analysis={donation.aiAnalysis} targetLang={i18n.language} />
                     </div>
                   </div>
                 ))

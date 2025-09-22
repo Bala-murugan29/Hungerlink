@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Eye, Clock, MapPin, ArrowLeft, Users, Heart, TrendingUp, Sparkles } from 'lucide-react';
 import Logo from './Logo';
 import Toast from './Toast';
+import { formatDateTime } from './lib/format';
+import { useTranslation } from 'react-i18next';
+import AIInsights from './components/AIInsights';
+import type { FoodQualityResult as ModelFoodQualityResult } from './services/geminiService';
 
 interface RecipientDashboardProps {
   user: any;
@@ -21,13 +25,6 @@ interface Request {
   remainingQuantity?: number;
 }
 
-interface FoodQualityResult {
-  quality: 'fresh' | 'check' | 'not-suitable';
-  confidence?: number;
-  reasons?: string[];
-  recommendations?: string[];
-}
-
 interface Donation {
   _id: string;
   foodType: string;
@@ -37,7 +34,7 @@ interface Donation {
   photo?: string;
   status: 'available' | 'claimed' | 'completed';
   aiQuality?: 'fresh' | 'check' | 'not-suitable';
-  aiAnalysis?: FoodQualityResult;
+  aiAnalysis?: ModelFoodQualityResult;
   claimedBy?: string;
   createdAt: string;
   user?: any;
@@ -45,6 +42,7 @@ interface Donation {
 }
 
 const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout }) => {
+  const { t, i18n } = useTranslation();
   const [currentView, setCurrentView] = useState<'dashboard' | 'request' | 'donations'>('dashboard');
   const [requests, setRequests] = useState<Request[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
@@ -146,7 +144,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
     } catch (error) {
       setToast({
         show: true,
-        message: 'Unable to get location. Please enter manually.',
+        message: t('errors.locationFailed'),
         type: 'error'
       });
     } finally {
@@ -177,14 +175,14 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to post request');
+        throw new Error(err.message || t('recipient.postError'));
       }
       const { request: saved } = await res.json();
       setRequests(prev => [saved, ...prev]);
 
       setToast({
         show: true,
-  message: '✅ Request posted successfully.',
+        message: t('recipient.postSuccess'),
         type: 'success'
       });
 
@@ -202,7 +200,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
     } catch (error) {
       setToast({
         show: true,
-        message: 'Failed to post request. Please try again.',
+        message: t('recipient.postError'),
         type: 'error'
       });
     } finally {
@@ -236,7 +234,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
 
       setToast({
         show: true,
-        message: `🎉 You claimed the donation. Arrange pickup.`,
+        message: t('recipient.claimSuccess'),
         type: 'success'
       });
 
@@ -266,9 +264,9 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
 
   const getStatusBadge = (status: string, aiQuality?: string) => {
     if (aiQuality) {
-      if (aiQuality === 'fresh') return <span className="badge badge-success">✅ Fresh</span>;
-      if (aiQuality === 'check') return <span className="badge badge-warning">⚠️ Check</span>;
-      if (aiQuality === 'not-suitable') return <span className="badge badge-error">❌ Not Suitable</span>;
+      if (aiQuality === 'fresh') return <span className="badge badge-success">✅ {t('quality.fresh')}</span>;
+      if (aiQuality === 'check') return <span className="badge badge-warning">⚠️ {t('quality.check')}</span>;
+      if (aiQuality === 'not-suitable') return <span className="badge badge-error">❌ {t('quality.notSuitable')}</span>;
     }
     
   if (status === 'open') return <span className="badge badge-warning">Open</span>;
@@ -331,7 +329,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                 className="back-button group"
               >
                 <ArrowLeft className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1" />
-                <span className="text-dark">Back</span>
+                <span className="text-dark">{t('common.back')}</span>
               </button>
               <Logo size="sm" />
             </div>
@@ -346,22 +344,22 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                   <Plus className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-3xl font-display font-bold text-gradient mb-2">
-                  🍽 Request Food
+                  🍽 {t('recipient.requestFood')}
                 </h2>
                 <p className="dashboard-subtitle">
-                  {user?.role === 'ngo' ? 'Request food assistance for your community' : 'Request food assistance for your family'}
+                  {user?.role === 'ngo' ? t('recipient.subtitleNgo') : t('recipient.subtitleIndividual')}
                 </p>
               </div>
               
               <form onSubmit={handleRequestSubmit} className="auth-form">
                 {/* Food Needed */}
                 <div className="form-group">
-                  <label className="form-label">Food Needed</label>
+                  <label className="form-label">{t('form.foodNeeded')}</label>
                   <div className="relative">
                     <input
                       type="text"
                       name="foodNeeded"
-                      placeholder="e.g., Rice or Chapati, Any vegetarian food"
+                      placeholder={t('placeholder.foodNeeded')}
                       value={requestForm.foodNeeded}
                       onChange={handleRequestInputChange}
                       onFocus={() => setFocusedField('foodNeeded')}
@@ -388,12 +386,12 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
 
                 {/* Quantity */}
                 <div className="form-group">
-                  <label className="form-label">Quantity</label>
+                  <label className="form-label">{t('form.quantity')}</label>
                   <div className="relative">
                     <input
                       type="text"
                       name="quantity"
-                      placeholder="e.g., 50 meals, 20 portions"
+                      placeholder={t('placeholder.quantity')}
                       value={requestForm.quantity}
                       onChange={handleRequestInputChange}
                       onFocus={() => setFocusedField('quantity')}
@@ -422,14 +420,14 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                 <div className="form-group">
                   <label className="form-label flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-secondary-500" />
-                    Location
+                    {t('common.location')}
                   </label>
                   <div className="flex gap-3">
                     <div className="relative flex-1">
                       <input
                         type="text"
                         name="location"
-                        placeholder="Enter delivery location"
+                        placeholder={t('placeholder.deliveryLocation')}
                         value={requestForm.location}
                         onChange={handleRequestInputChange}
                         onFocus={() => setFocusedField('location')}
@@ -458,7 +456,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                       disabled={isGettingLocation}
                       className="btn-secondary flex-shrink-0"
                       style={{ padding: 'var(--space-4)' }}
-                      title="Use my GPS location"
+                      title={t('auth.useMyLocation')}
                     >
                       {isGettingLocation ? (
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
@@ -474,14 +472,14 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                   <div className="p-6 bg-secondary-50 border-2 border-secondary-200 rounded-2xl animate-slide-down">
                     <div className="flex items-center gap-2 text-secondary-700 font-semibold mb-4">
                       <Users className="w-5 h-5" />
-                      <span className="text-dark">NGO Information</span>
+                      <span className="text-dark">{t('recipient.ngoInfo')}</span>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">NGO Registration ID</label>
+                      <label className="form-label">{t('recipient.ngoRegId')}</label>
                       <input
                         type="text"
                         name="ngoId"
-                        placeholder="Enter your NGO registration ID"
+                        placeholder={t('placeholder.ngoRegId')}
                         value={requestForm.ngoId}
                         onChange={handleRequestInputChange}
                         className="input-field"
@@ -650,29 +648,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                                 </p>
 
                                 {/* AI Insights Section */}
-                                <div className="mt-3 p-3 bg-primary-50 border border-primary-200 rounded-xl">
-                                  <h4 className="font-semibold text-primary-700 mb-1 text-base">AI Insights</h4>
-                                  {donation.aiAnalysis && (donation.aiAnalysis.reasons?.length || donation.aiAnalysis.recommendations?.length) ? (
-                                    <>
-                                      {(donation.aiAnalysis.reasons?.length ?? 0) > 0 && (
-                                        <ul className="text-sm mb-1 list-disc pl-5">
-                                          {(donation.aiAnalysis.reasons ?? []).map((reason: string, idx: number) => (
-                                            <li key={idx}>{reason}</li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                      {(donation.aiAnalysis.recommendations?.length ?? 0) > 0 && (
-                                        <ul className="text-xs text-primary-800 list-disc pl-5">
-                                          {(donation.aiAnalysis.recommendations ?? []).map((rec: string, idx: number) => (
-                                            <li key={idx}>{rec}</li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <span className="text-xs text-primary-700">No AI insights available for this donation.</span>
-                                  )}
-                                </div>
+                                <AIInsights analysis={donation.aiAnalysis} targetLang={i18n.language} />
                               </div>
                               <div className="flex flex-col gap-2">
                                 {getStatusBadge(donation.status, donation.aiQuality)}
@@ -915,7 +891,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           {getStatusBadge(req.status)}
-                          <span className="text-xs text-neutral-500">{new Date(req.createdAt).toLocaleString()}</span>
+                          <span className="text-xs text-neutral-500">{formatDateTime(req.createdAt)}</span>
                         </div>
                       </div>
                     ))}

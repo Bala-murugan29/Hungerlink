@@ -8,6 +8,8 @@ export interface FoodQualityResult {
     confidence: number;
     reasons: string[];
     recommendations: string[];
+    // Language code the model responded in (e.g., 'en', 'hi', 'ta')
+    language?: string;
 }
 
 export class GeminiService {
@@ -17,18 +19,21 @@ export class GeminiService {
                 this.model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
     }
 
-        async analyzeFoodQuality(
+    async analyzeFoodQuality(
                 foodType: string,
                 manufacturingDate: string,
-                imageFile?: File
+            imageFile?: File,
+            lang: string = (navigator?.language?.split?.('-')?.[0] || 'en')
         ): Promise<FoodQualityResult> {
         try {
-                        let prompt = `
+                    let prompt = `
                 Analyze the food quality for donation based on the following information:
 
                 Food Type: ${foodType}
                 Manufacturing Date/Time: ${manufacturingDate}
                 Current Time: ${new Date().toLocaleString()}
+
+                Respond ONLY in language code: ${lang}. Keep it concise.
 
                 Please evaluate if this food is suitable for donation and provide:
                 1. Quality rating: "fresh", "check", or "not-suitable"
@@ -36,8 +41,7 @@ export class GeminiService {
                 3. Specific reasons for your assessment
                 4. Recommendations for the donor
                 5. Use the manufacturing date/time together with the food type and image to determine freshness and safety.
-
-                Consider factors like:
+  Consider factors like:
                 - Time since manufacturing
                 - Food type and perishability
                 - Visual spoilage indicators in the image
@@ -87,16 +91,17 @@ export class GeminiService {
                     quality: analysis.quality || 'check',
                     confidence: analysis.confidence || 75,
                     reasons: analysis.reasons || ['Analysis completed'],
-                    recommendations: analysis.recommendations || ['Follow food safety guidelines']
+                    recommendations: analysis.recommendations || ['Follow food safety guidelines'],
+                    language: lang
                 };
             }
 
             // Fallback if JSON parsing fails
-            return this.getFallbackAnalysis(foodType, manufacturingDate);
+            return this.getFallbackAnalysis(foodType, manufacturingDate, lang);
 
         } catch (error) {
             console.error('Gemini analysis error:', error);
-            return this.getFallbackAnalysis(foodType, manufacturingDate);
+            return this.getFallbackAnalysis(foodType, manufacturingDate, lang);
         }
     }
 
@@ -112,7 +117,7 @@ export class GeminiService {
         });
     }
 
-    private getFallbackAnalysis(foodType: string, manufacturingDate: string): FoodQualityResult {
+    private getFallbackAnalysis(foodType: string, manufacturingDate: string, lang?: string): FoodQualityResult {
         // Best-effort fallback using manufacturing date/time
         // manufacturingDate is expected as an ISO-like string (e.g. 2025-09-18T14:30)
         try {
@@ -123,7 +128,8 @@ export class GeminiService {
                     quality: 'check',
                     confidence: 55,
                     reasons: ['No valid manufacturing date provided'],
-                    recommendations: ['Provide manufacturing date or a photo for better analysis']
+                    recommendations: ['Provide manufacturing date or a photo for better analysis'],
+                    language: lang
                 };
             }
 
@@ -156,7 +162,8 @@ export class GeminiService {
                     quality: 'fresh',
                     confidence: Math.min(95, 70 + (threshold - hoursSince)),
                     reasons: [`Manufactured ${Math.round(hoursSince)} hours ago; within safe window for this food type`],
-                    recommendations: ['Safe for donation; distribute soon', 'Keep refrigerated if applicable']
+                    recommendations: ['Safe for donation; distribute soon', 'Keep refrigerated if applicable'],
+                    language: lang
                 };
             }
 
@@ -165,7 +172,8 @@ export class GeminiService {
                     quality: 'check',
                     confidence: Math.max(50, 70 - (hoursSince / threshold) * 30),
                     reasons: [`Manufactured ${Math.round(hoursSince)} hours ago; may still be OK depending on storage`],
-                    recommendations: ['Verify smell and appearance', 'Keep chilled and deliver quickly']
+                    recommendations: ['Verify smell and appearance', 'Keep chilled and deliver quickly'],
+                    language: lang
                 };
             }
 
@@ -173,14 +181,16 @@ export class GeminiService {
                 quality: 'not-suitable',
                 confidence: 90,
                 reasons: [`Manufactured ${Math.round(hoursSince)} hours ago; likely beyond safe window for donation`],
-                recommendations: ['Do not donate if spoiled', 'Dispose safely if in doubt']
+                recommendations: ['Do not donate if spoiled', 'Dispose safely if in doubt'],
+                language: lang
             };
         } catch (e) {
             return {
                 quality: 'check',
                 confidence: 50,
                 reasons: ['Unable to evaluate manufacturing date'],
-                recommendations: ['Provide photo and clear manufacturing date/time']
+                recommendations: ['Provide photo and clear manufacturing date/time'],
+                language: lang
             };
         }
     }
