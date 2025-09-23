@@ -13,32 +13,62 @@ const AIInsights: React.FC<AIInsightsProps> = ({ analysis, targetLang }) => {
   const [localized, setLocalized] = useState<FoodQualityResult | null>(analysis ?? null);
   const [loading, setLoading] = useState(false);
 
+  // Normalize language codes to base language (e.g., 'en-US' -> 'en')
+  const normalizeLanguage = (lang: string) => {
+    return lang ? lang.split('-')[0].toLowerCase() : 'en';
+  };
+
   // Heuristic: if the text doesn't appear in the target language script, translate anyway
   const textLooksLikeTarget = (text: string, lang: string) => {
     if (!text) return false;
-    const base = lang.split('-')[0];
+    const base = normalizeLanguage(lang);
     if (base === 'ta') {
-      // Tamil block
+      // Tamil block - check if at least some Tamil characters exist
       return /[\u0B80-\u0BFF]/.test(text);
     }
     if (base === 'hi') {
-      // Devanagari block
+      // Devanagari block - check if at least some Hindi characters exist
       return /[\u0900-\u097F]/.test(text);
     }
-    // For other languages, skip script check
+    if (base === 'en') {
+      // For English, check if it contains Latin characters and no other scripts
+      return /[A-Za-z]/.test(text) && !/[\u0900-\u097F\u0B80-\u0BFF]/.test(text);
+    }
+    // For other languages, assume it's correct
     return true;
   };
 
   const needsTranslation = useMemo(() => {
     const hasText = (analysis?.reasons?.length || analysis?.recommendations?.length);
     if (!hasText) return false;
+    
+    const normalizedTarget = normalizeLanguage(targetLang);
+    const normalizedAnalysis = normalizeLanguage(analysis?.language || '');
+    
+    // Always translate if no target language set
+    if (!normalizedTarget) return false;
+    
+    // Always translate if we don't know the analysis language
+    if (!normalizedAnalysis) {
+      console.log('[AIInsights] No analysis language detected, will translate');
+      return true;
+    }
+    
+    // Translate if languages are different
+    if (normalizedAnalysis !== normalizedTarget) {
+      console.log(`[AIInsights] Language mismatch: ${normalizedAnalysis} vs ${normalizedTarget}, will translate`);
+      return true;
+    }
+    
+    // Same language codes - check if content actually matches the target script
     const combined = `${(analysis?.reasons || []).join(' ')} ${(analysis?.recommendations || []).join(' ')}`.trim();
-    // Translate if we don't know original language
-    if (!analysis?.language) return !!targetLang;
-    // Translate if language differs
-    if (analysis.language !== targetLang) return true;
-    // Same language set, but content may still be in another script (model ignored instruction)
-    return !textLooksLikeTarget(combined, targetLang);
+    const looksCorrect = textLooksLikeTarget(combined, normalizedTarget);
+    
+    if (!looksCorrect) {
+      console.log(`[AIInsights] Content doesn't match expected script for ${normalizedTarget}, will translate`);
+    }
+    
+    return !looksCorrect;
   }, [analysis, targetLang]);
 
 
@@ -50,14 +80,20 @@ const AIInsights: React.FC<AIInsightsProps> = ({ analysis, targetLang }) => {
         return;
       }
       if (!needsTranslation) {
+        console.log('[AIInsights] No translation needed, using original analysis');
         setLocalized(analysis);
         return;
       }
       try {
         setLoading(true);
+        console.log(`[AIInsights] Starting translation to ${targetLang}...`);
         const tx = await translateAnalysis(analysis, targetLang);
-        if (!cancelled) setLocalized(tx);
-      } catch {
+        if (!cancelled) {
+          console.log('[AIInsights] Translation completed successfully');
+          setLocalized(tx);
+        }
+      } catch (error) {
+        console.error('[AIInsights] Translation failed:', error);
         if (!cancelled) setLocalized(analysis);
       } finally {
         if (!cancelled) setLoading(false);

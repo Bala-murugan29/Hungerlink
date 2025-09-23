@@ -20,20 +20,23 @@ export class GeminiService {
     }
 
     async analyzeFoodQuality(
-                foodType: string,
-                manufacturingDate: string,
-            imageFile?: File,
-            lang: string = (navigator?.language?.split?.('-')?.[0] || 'en')
-        ): Promise<FoodQualityResult> {
+        foodType: string,
+        manufacturingDate: string,
+        imageFile?: File,
+        lang: string = (navigator?.language?.split?.('-')?.[0] || 'en')
+    ): Promise<FoodQualityResult> {
         try {
-                    let prompt = `
+            // Normalize language to base code (e.g., 'en-US' -> 'en')
+            const normalizedLang = lang.split('-')[0].toLowerCase();
+            
+            let prompt = `
                 Analyze the food quality for donation based on the following information:
 
                 Food Type: ${foodType}
                 Manufacturing Date/Time: ${manufacturingDate}
                 Current Time: ${new Date().toLocaleString()}
 
-                Respond ONLY in language code: ${lang}. Keep it concise.
+                Respond ONLY in language code: ${normalizedLang}. Keep it concise.
 
                 Please evaluate if this food is suitable for donation and provide:
                 1. Quality rating: "fresh", "check", or "not-suitable"
@@ -92,16 +95,16 @@ export class GeminiService {
                     confidence: analysis.confidence || 75,
                     reasons: analysis.reasons || ['Analysis completed'],
                     recommendations: analysis.recommendations || ['Follow food safety guidelines'],
-                    language: lang
+                    language: normalizedLang
                 };
             }
 
             // Fallback if JSON parsing fails
-            return this.getFallbackAnalysis(foodType, manufacturingDate, lang);
+            return this.getFallbackAnalysis(foodType, manufacturingDate, normalizedLang);
 
         } catch (error) {
             console.error('Gemini analysis error:', error);
-            return this.getFallbackAnalysis(foodType, manufacturingDate, lang);
+            return this.getFallbackAnalysis(foodType, manufacturingDate, lang.split('-')[0].toLowerCase());
         }
     }
 
