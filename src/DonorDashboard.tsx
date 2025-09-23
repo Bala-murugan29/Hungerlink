@@ -4,7 +4,6 @@ import Logo from './Logo';
 import Toast from './Toast';
 import { FoodQualityResult, geminiService } from './services/geminiService';
 import { useTranslation } from 'react-i18next';
-import AIInsights from './components/AIInsights';
 interface DonorDashboardProps {
   user: any;
   onLogout: () => void;
@@ -496,12 +495,12 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
 
                 {/* Donor Contact Phone */}
                 <div className="form-group">
-                  <label className="form-label">Your Phone (for pickup contact)</label>
+                  <label className="form-label">{t('donor.donorPhoneLabel')}</label>
                   <div className="relative">
                     <input
                       type="tel"
                       name="donorPhone"
-                      placeholder="e.g., +919876543210"
+                      placeholder={t('placeholder.phoneExample')}
                       value={donationForm.donorPhone}
                       onChange={handleDonationInputChange}
                       onFocus={() => setFocusedField('donorPhone')}
@@ -528,7 +527,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
 
                 {/* Photo Upload */}
                 <div className="form-group">
-                  <label className="form-label">Food Photo (Recommended for AI Analysis)</label>
+                  <label className="form-label">{t('donation.photoRecommended')}</label>
                   <label className="relative flex items-center justify-center w-full p-8 border-2 border-dashed border-neutral-300 rounded-2xl cursor-pointer hover:border-primary-400 transition-all duration-300 group">
                     <input
                       type="file"
@@ -545,8 +544,8 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                       <div className="flex flex-col items-center gap-3 text-neutral-600 group-hover:text-primary-600 transition-colors duration-300">
                         <Upload className="w-8 h-8" />
                         <div className="text-center">
-                          <p className="font-medium card-title">Upload a photo of your food</p>
-                          <p className="text-sm card-subtitle">Helps AI analyze quality and recipients see what you're sharing</p>
+                          <p className="font-medium card-title">{t('donation.uploadPhoto')}</p>
+                          <p className="text-sm card-subtitle">{t('donation.uploadHint')}</p>
                         </div>
                       </div>
                     )}
@@ -693,7 +692,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                             <p className="dashboard-subtitle">{t('common.location')}: {typeof req.location === 'string' ? req.location : req.location?.address}</p>
                           </div>
                           <div className="flex flex-col items-end gap-2">
-                            <span className="badge badge-info">{req.status}</span>
+                            <span className="badge badge-info">{t(`status.${req.status}`)}</span>
                             <button
                               className="btn-secondary text-sm px-4 py-2"
                               onClick={() => {
@@ -786,7 +785,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
           <div className="flex items-center justify-between mb-12 animate-slide-down">
             <Logo size="md" animated={true} />
             <button onClick={onLogout} className="btn-ghost group">
-              <span className="text-dark">Logout</span>
+              <span className="text-dark">{t('common.logout')}</span>
               <ArrowLeft className="w-4 h-4 rotate-180 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
           </div>
@@ -797,10 +796,10 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
               <Heart className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-4xl md:text-5xl font-display font-bold text-gradient mb-4">
-              👋 Welcome, {user?.name}
+              👋 {t('common.welcome')}, {user?.name}
             </h1>
             <p className="text-xl dashboard-subtitle max-w-2xl mx-auto">
-              Ready to make a difference today? Share your surplus food with those who need it most.
+              {t('donor.hero')}
             </p>
           </div>
 
@@ -816,8 +815,8 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                   <Plus className="w-6 h-6" />
                 </div>
                 <div className="text-left">
-                  <h3 className="text-2xl font-bold mb-1 text-white">🥘 Donate Food</h3>
-                  <p className="text-white opacity-80">Share your surplus meals</p>
+                  <h3 className="text-2xl font-bold mb-1 text-white">🥘 {t('donor.donateFood')}</h3>
+                  <p className="text-white opacity-80">{t('donor.shareMeals')}</p>
                 </div>
               </div>
             </button>
@@ -833,8 +832,8 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                   <Eye className="w-6 h-6" />
                 </div>
                 <div className="text-left">
-                  <h3 className="text-2xl font-bold mb-1 text-white">📋 View Requests</h3>
-                  <p className="text-white opacity-80">Help fulfill community needs</p>
+                  <h3 className="text-2xl font-bold mb-1 text-white">📋 {t('donor.viewRequests')}</h3>
+                  <p className="text-white opacity-80">{t('donor.fulfillNeeds')}</p>
                 </div>
               </div>
             </button>
@@ -847,7 +846,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                 <TrendingUp className="w-6 h-6 text-primary-600" />
               </div>
               <h3 className="stats-number">{donations.length}</h3>
-              <p className="stats-label">Total Donations</p>
+              <p className="stats-label">{t('donor.totalDonations')}</p>
             </div>
             
             <div className="stats-card animate-slide-up" style={{ animationDelay: '0.2s' }}>
@@ -855,7 +854,7 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                 <Users className="w-6 h-6 text-secondary-600" />
               </div>
               <h3 className="stats-number">{donations.filter(d => d.status === 'completed').length}</h3>
-              <p className="stats-label">People Helped</p>
+              <p className="stats-label">{t('donor.peopleHelped')}</p>
             </div>
             
             <div className="stats-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
@@ -866,17 +865,17 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                 <Heart className="w-6 h-6 text-warning" />
               </div>
               <h3 className="stats-number">{donations.filter(d => d.status === 'available').length}</h3>
-              <p className="stats-label">Active Donations</p>
+              <p className="stats-label">{t('donor.activeDonations')}</p>
             </div>
           </div>
 
           {/* Donations History */}
           <div className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-display font-bold dashboard-title">Your Donations</h2>
+              <h2 className="text-2xl font-display font-bold dashboard-title">{t('donor.yourDonations')}</h2>
               <div className="flex items-center gap-2 card-text">
                 <Clock className="w-4 h-4" />
-                <span className="text-sm">Recent activity</span>
+                <span className="text-sm">{t('common.recentActivity')}</span>
               </div>
             </div>
             
@@ -887,13 +886,13 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                     <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Heart className="w-12 h-12 text-neutral-400" />
                     </div>
-                    <h3 className="text-xl font-semibold dashboard-title mb-2">No donations yet</h3>
-                    <p className="dashboard-subtitle mb-6">Start by posting your first donation to help those in need.</p>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">{t('donor.noDonationsYet')}</h3>
+                    <p className="dashboard-subtitle mb-6">{t('donor.noDonationsHint')}</p>
                     <button 
                       onClick={() => setCurrentView('donate')}
                       className="btn-primary"
                     >
-                      Post Your First Donation
+                      {t('donor.postFirstDonation')}
                     </button>
                   </div>
                 </div>
@@ -914,16 +913,14 @@ const DonorDashboard: React.FC<DonorDashboardProps> = ({ user, onLogout }) => {
                     )}
                     <div className="flex-1">
                       <h3 className="text-xl font-semibold dashboard-title mb-2">{donation.foodType}</h3>
-                      <p className="dashboard-subtitle mb-2">Quantity: {donation.quantity}</p>
-                      <p className="dashboard-subtitle mb-2">Manufactured: {donation.manufacturingDate || 'N/A'}</p>
+                      <p className="dashboard-subtitle mb-2">{t('form.quantity')}: {donation.quantity}</p>
+                      <p className="dashboard-subtitle mb-2">{t('form.manufactured')}: {donation.manufacturingDate || 'N/A'}</p>
                       {donation.status === 'claimed' && donation.claimedBy && (
-                        <p className="dashboard-subtitle mb-2">Claimed by: {typeof donation.claimedBy === 'object' ? donation.claimedBy.name || donation.claimedBy.email : donation.claimedBy} {donation.claimantPhone ? `(${donation.claimantPhone})` : ''}</p>
+                        <p className="dashboard-subtitle mb-2">{t('donor.claimedBy')}: {typeof donation.claimedBy === 'object' ? donation.claimedBy.name || donation.claimedBy.email : donation.claimedBy} {donation.claimantPhone ? `(${donation.claimantPhone})` : ''}</p>
                       )}
-                      <p className="dashboard-subtitle mb-2">Location: {typeof donation.location === 'object' && donation.location !== null && (donation.location as any).address ? (donation.location as any).address : donation.location}</p>
-                      <span className="badge badge-info mr-2">{donation.status}</span>
+                      <p className="dashboard-subtitle mb-2">{t('common.location')}: {typeof donation.location === 'object' && donation.location !== null && (donation.location as any).address ? (donation.location as any).address : donation.location}</p>
+                      <span className="badge badge-info mr-2">{t(`status.${donation.status}`)}</span>
                       {getAiBadge(donation.aiQuality)}
-                      {/* AI Insights localized */}
-                      <AIInsights analysis={donation.aiAnalysis} targetLang={i18n.language} />
                     </div>
                   </div>
                 ))

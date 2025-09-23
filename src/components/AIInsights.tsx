@@ -41,6 +41,7 @@ const AIInsights: React.FC<AIInsightsProps> = ({ analysis, targetLang }) => {
     return !textLooksLikeTarget(combined, targetLang);
   }, [analysis, targetLang]);
 
+
   useEffect(() => {
     let cancelled = false;
     const run = async () => {

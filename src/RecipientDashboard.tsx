@@ -227,7 +227,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
         },
         body: JSON.stringify({ status: 'claimed', claimedBy: user._id, claimantPhone: phone })
       });
-      if (!response.ok) {
+  if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to claim donation');
       }
@@ -253,7 +253,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
       setDonations(prev => prev.map(d => d._id === donationId ? { ...d, status: 'available', claimedBy: undefined } : d));
       setToast({
         show: true,
-        message: error.message || 'Failed to claim donation. Please try again.',
+        message: error.message || t('recipient.claimError'),
         type: 'error'
       });
     } finally {
@@ -269,11 +269,11 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
       if (aiQuality === 'not-suitable') return <span className="badge badge-error">❌ {t('quality.notSuitable')}</span>;
     }
     
-  if (status === 'open') return <span className="badge badge-warning">Open</span>;
-    if (status === 'accepted') return <span className="badge badge-success">Accepted</span>;
-    if (status === 'fulfilled') return <span className="badge badge-success">Fulfilled</span>;
-    if (status === 'available') return <span className="badge badge-info">Available</span>;
-    if (status === 'claimed') return <span className="badge badge-success">Claimed</span>;
+  if (status === 'open') return <span className="badge badge-warning">{t('status.open')}</span>;
+    if (status === 'accepted') return <span className="badge badge-success">{t('status.accepted')}</span>;
+    if (status === 'fulfilled') return <span className="badge badge-success">{t('status.fulfilled')}</span>;
+    if (status === 'available') return <span className="badge badge-info">{t('status.available')}</span>;
+    if (status === 'claimed') return <span className="badge badge-success">{t('status.claimed')}</span>;
     
     return null;
   };
@@ -501,14 +501,14 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                     isLoading ? 'opacity-70 cursor-not-allowed' : ''
                   }`}
                 >
-                  {isLoading ? (
+          {isLoading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
-                      Posting...
+            {t('recipient.posting')}
                     </>
                   ) : (
                     <>
-                      Post Request
+            {t('recipient.post')}
                       <Heart className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                     </>
                   )}
@@ -572,7 +572,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                 className="back-button group"
               >
                 <ArrowLeft className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1" />
-                <span className="text-dark">Back</span>
+                <span className="text-dark">{t('common.back')}</span>
               </button>
               <Logo size="sm" />
             </div>
@@ -585,12 +585,8 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
               >
                 <Heart className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-3xl font-display font-bold text-gradient mb-2">
-                🥘 Available Donations
-              </h2>
-              <p className="dashboard-subtitle">
-                Discover fresh food donations from generous donors nearby
-              </p>
+              <h2 className="text-3xl font-display font-bold text-gradient mb-2">🥘 {t('recipient.availableDonations')}</h2>
+              <p className="dashboard-subtitle">{t('recipient.availableSubtitle')}</p>
             </div>
             
             {/* Donations List */}
@@ -599,11 +595,11 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                 {donationsLoading ? (
                   <div className="card p-12 text-center animate-scale-in">
                     <div className="w-8 h-8 border-2 border-neutral-300 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="dashboard-subtitle">Loading donations...</p>
+                    <p className="dashboard-subtitle">{t('common.loading')}</p>
                   </div>
                 ) : donationsError ? (
                   <div className="card p-12 text-center animate-scale-in">
-                    <h3 className="text-xl font-semibold dashboard-title mb-2">Could not load donations</h3>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">{t('recipient.couldNotLoadDonations')}</h3>
                     <p className="dashboard-subtitle">{donationsError}</p>
                   </div>
                 ) : donations.length === 0 ? (
@@ -611,8 +607,8 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                     <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Heart className="w-12 h-12 text-neutral-400" />
                     </div>
-                    <h3 className="text-xl font-semibold dashboard-title mb-2">No donations available</h3>
-                    <p className="dashboard-subtitle">Check back later for new food donations from the community.</p>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">{t('recipient.noDonations')}</h3>
+                    <p className="dashboard-subtitle">{t('recipient.noDonationsHint')}</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -639,12 +635,12 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                             <div className="flex items-start justify-between mb-4">
                               <div>
                                 <h3 className="text-xl font-semibold dashboard-title mb-2">{donation.foodType}</h3>
-                                <p className="dashboard-subtitle mb-2">Quantity: {donation.quantity}</p>
-                                <p className="dashboard-subtitle mb-2">Manufactured: {donation.manufacturingDate || 'N/A'}</p>
+                                <p className="dashboard-subtitle mb-2">{t('form.quantity')}: {donation.quantity}</p>
+                                <p className="dashboard-subtitle mb-2">{t('form.manufactured')}: {donation.manufacturingDate || 'N/A'}</p>
                                 <p className="dashboard-subtitle">
-                                  Location: {typeof donation.location === 'string' 
+                                  {t('common.location')}: {typeof donation.location === 'string' 
                                     ? donation.location 
-                                    : donation.location?.address || 'Address not available'}
+                                    : donation.location?.address || t('common.noAddress')}
                                 </p>
 
                                 {/* AI Insights Section */}
@@ -658,7 +654,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                                       <div className="flex items-center gap-2">
                                         <input
                                           type="tel"
-                                          placeholder="Your phone for pickup"
+                                          placeholder={t('recipient.phoneForPickup')}
                                           value={claimPhoneByDonation[donation._id] ?? user?.phone ?? ''}
                                           onChange={(e) => setClaimPhoneByDonation(prev => ({ ...prev, [donation._id]: e.target.value }))}
                                           className="input-field text-sm"
@@ -669,13 +665,13 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                                           className="btn-secondary text-sm px-4 py-2"
                                           disabled={!!claimingDonationId}
                                         >
-                                          {claimingDonationId === donation._id ? 'Claiming...' : 'Claim Food'}
+                                          {claimingDonationId === donation._id ? t('recipient.claiming') : t('recipient.claimFood')}
                                         </button>
                                       </div>
                                     ) : (
                                       claimingDonationId === donation._id ? (
                                         <button className="btn-secondary text-sm px-4 py-2 opacity-70 cursor-not-allowed" disabled>
-                                          Claiming...
+                                          {t('recipient.claiming')}
                                         </button>
                                       ) : null
                                     )}
@@ -764,7 +760,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
           <div className="flex items-center justify-between mb-12 animate-slide-down">
             <Logo size="md" animated={true} />
             <button onClick={onLogout} className="btn-ghost group">
-              <span className="text-dark">Logout</span>
+              <span className="text-dark">{t('common.logout')}</span>
               <ArrowLeft className="w-4 h-4 rotate-180 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
           </div>
@@ -778,12 +774,12 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
               {user?.role === 'ngo' ? <Users className="w-10 h-10 text-white" /> : <Heart className="w-10 h-10 text-white" />}
             </div>
             <h1 className="text-4xl md:text-5xl font-display font-bold text-gradient mb-4">
-              👋 Welcome, {user?.name}
+              👋 {t('common.welcome')}, {user?.name}
             </h1>
             <p className="text-xl dashboard-subtitle max-w-2xl mx-auto">
               {user?.role === 'ngo' 
-                ? 'Helping communities access nutritious food and support those in need.'
-                : 'Find food assistance and connect with generous donors in your community.'
+                ? t('recipient.heroNgo')
+                : t('recipient.heroIndividual')
               }
             </p>
           </div>
@@ -801,8 +797,8 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                   <Plus className="w-6 h-6" />
                 </div>
                 <div className="text-left">
-                  <h3 className="text-2xl font-bold mb-1 text-white">🍽 Request Food</h3>
-                  <p className="text-white opacity-80">Post your food needs</p>
+                  <h3 className="text-2xl font-bold mb-1 text-white">🍽 {t('recipient.requestFood')}</h3>
+                  <p className="text-white opacity-80">{t('recipient.postYourNeeds')}</p>
                 </div>
               </div>
             </button>
@@ -817,8 +813,8 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                   <Eye className="w-6 h-6" />
                 </div>
                 <div className="text-left">
-                  <h3 className="text-2xl font-bold mb-1 text-white">🥘 View Donations</h3>
-                  <p className="text-white opacity-80">Browse available food</p>
+                  <h3 className="text-2xl font-bold mb-1 text-white">🥘 {t('recipient.viewDonations')}</h3>
+                  <p className="text-white opacity-80">{t('recipient.browseAvailable')}</p>
                 </div>
               </div>
             </button>
@@ -831,7 +827,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                 <TrendingUp className="w-6 h-6 text-secondary-600" />
               </div>
               <h3 className="stats-number">{requests.length}</h3>
-              <p className="stats-label">Total Requests</p>
+              <p className="stats-label">{t('recipient.totalRequests')}</p>
             </div>
             
             <div className="stats-card animate-slide-up" style={{ animationDelay: '0.2s' }}>
@@ -839,7 +835,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                 <Heart className="w-6 h-6 text-primary-600" />
               </div>
               <h3 className="stats-number">{requests.filter(r => r.status === 'fulfilled').length}</h3>
-              <p className="stats-label">Meals Received</p>
+              <p className="stats-label">{t('recipient.mealsReceived')}</p>
             </div>
             
             <div className="stats-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
@@ -850,17 +846,17 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                 <Users className="w-6 h-6 text-warning" />
               </div>
               <h3 className="stats-number">{requests.filter(r => r.status === 'open').length}</h3>
-              <p className="stats-label">Active Requests</p>
+              <p className="stats-label">{t('recipient.activeRequests')}</p>
             </div>
           </div>
 
           {/* Requests History */}
           <div className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-display font-bold dashboard-title">Your Requests</h2>
+              <h2 className="text-2xl font-display font-bold dashboard-title">{t('recipient.yourRequests')}</h2>
               <div className="flex items-center gap-2 card-text">
                 <Clock className="w-4 h-4" />
-                <span className="text-sm">Recent activity</span>
+                <span className="text-sm">{t('common.recentActivity')}</span>
               </div>
             </div>
             
@@ -871,13 +867,13 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                     <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Heart className="w-12 h-12 text-neutral-400" />
                     </div>
-                    <h3 className="text-xl font-semibold dashboard-title mb-2">No requests yet</h3>
-                    <p className="dashboard-subtitle mb-6">Start by posting your first food request to get help from the community.</p>
+                    <h3 className="text-xl font-semibold dashboard-title mb-2">{t('recipient.noRequestsYet')}</h3>
+                    <p className="dashboard-subtitle mb-6">{t('recipient.noRequestsHint')}</p>
                     <button 
                       onClick={() => setCurrentView('request')}
                       className="btn-primary"
                     >
-                      Post Your First Request
+                      {t('recipient.postFirstRequest')}
                     </button>
                   </div>
                 ) : (
@@ -886,8 +882,8 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
                       <div key={req._id} className="card p-6 flex items-start justify-between">
                         <div>
                           <h3 className="text-lg font-semibold dashboard-title">{req.foodNeeded}</h3>
-                          <p className="dashboard-subtitle">Quantity: {req.quantity} • Remaining: {req.remainingQuantity ?? Math.max(0, (req.numericRequested || 0) - (req.fulfilledQuantity || 0))}</p>
-                          <p className="dashboard-subtitle">Location: {typeof req.location === 'string' ? req.location : req.location?.address}</p>
+                          <p className="dashboard-subtitle">{t('form.quantity')}: {req.quantity} • {t('donor.remaining')}: {req.remainingQuantity ?? Math.max(0, (req.numericRequested || 0) - (req.fulfilledQuantity || 0))}</p>
+                          <p className="dashboard-subtitle">{t('common.location')}: {typeof req.location === 'string' ? req.location : req.location?.address}</p>
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           {getStatusBadge(req.status)}
