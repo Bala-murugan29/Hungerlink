@@ -1,0 +1,154 @@
+{
+  "app": {
+    "title": "HungerLink"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back! Sign in to continue your journey.",
+    "emailOrPhone": "Email or Phone",
+    "emailOrPhonePlaceholder": "Enter your email or phone number",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "createPassword": "Create a strong password (min 6 characters)",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your full name",
+    "location": "Location",
+    "locationPlaceholder": "Enter your location",
+    "useMyLocation": "Use my GPS location",
+    "login": "Sign in",
+    "signup": "Create Account",
+    "alreadyHaveAccount": "Already have an account?",
+    "signInInstead": "Sign in instead"
+  },
+  "role": {
+    "choose": "Choose Your Role",
+    "donor": {
+      "title": "Donor",
+      "desc": "Share surplus food from restaurants, events, or homes"
+    },
+    "recipient": {
+      "title": "Recipient",
+      "desc": "Find food assistance for individuals and families"
+    },
+    "ngo": {
+      "title": "NGO",
+      "desc": "Coordinate food distribution for communities"
+    }
+  },
+  "ai": {
+    "analyzing": "Analyzing with Gemini...",
+    "insights": "AI Insights",
+    "noInsights": "No AI insights available for this donation."
+  },
+  "quality": {
+    "fresh": "Fresh",
+    "check": "Check",
+    "notSuitable": "Not Suitable"
+  },
+  "donation": {
+    "uploadPhoto": "Upload a photo of your food",
+    "uploadHint": "Helps AI analyze quality and recipients see what you're sharing",
+    "post": "Post Donation",
+    "posting": "Posting...",
+    "photoRecommended": "Food Photo (Recommended for AI Analysis)"
+  },
+  "form": {
+    "foodType": "Food Type",
+    "foodNeeded": "Food Needed",
+    "quantity": "Quantity",
+  "mfd": "Manufacturing Date & Time (MFD)",
+  "manufactured": "Manufactured"
+  },
+  "placeholder": {
+    "foodType": "e.g., Vegetable Biryani, Mixed Rice",
+    "quantity": "e.g., 40 plates, 25 portions",
+    "foodNeeded": "e.g., Rice or Chapati, Any vegetarian food",
+    "pickupLocation": "Enter pickup location",
+    "deliveryLocation": "Enter delivery location",
+  "ngoRegId": "Enter your NGO registration ID",
+  "phoneExample": "e.g., +919876543210"
+  },
+  "common": {
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "continue": "Continue",
+  "back": "Back",
+  "welcome": "Welcome",
+  "logout": "Logout",
+  "location": "Location",
+  "clear": "Clear",
+  "recentActivity": "Recent activity",
+  "noAddress": "Address not available"
+  },
+  "errors": {
+    "locationFailed": "Unable to get location. Please enter manually."
+  },
+  "status": {
+    "open": "Open",
+    "accepted": "Accepted",
+    "fulfilled": "Fulfilled",
+  "available": "Available",
+  "claimed": "Claimed",
+  "completed": "Completed"
+  },
+  "donor": {
+    "donateFood": "Donate Food",
+    "subtitle": "Share your surplus food with those who need it most",
+  "donorPhoneLabel": "Your Phone (for pickup contact)",
+  "hero": "Ready to make a difference today? Share your surplus food with those who need it most.",
+  "shareMeals": "Share your surplus meals",
+  "viewRequests": "View Requests",
+  "fulfillNeeds": "Help fulfill community needs",
+  "totalDonations": "Total Donations",
+  "peopleHelped": "People Helped",
+  "activeDonations": "Active Donations",
+  "yourDonations": "Your Donations",
+  "noDonationsYet": "No donations yet",
+  "noDonationsHint": "Start by posting your first donation to help those in need.",
+  "postFirstDonation": "Post Your First Donation",
+  "claimedBy": "Claimed by",
+    "fulfilling": "Fulfilling Request",
+    "remaining": "Remaining needed",
+    "exceedsRemaining": "Donation exceeds remaining need ({{donateQty}} > {{remaining}}). Please reduce the quantity.",
+    "postSuccess": "🎉 Donation posted successfully!",
+    "postError": "Failed to post donation. Please try again.",
+    "requestsTitle": "Food Requests",
+    "requestsSubtitle": "Help fulfill requests from those in need",
+    "couldNotLoad": "Could not load requests",
+    "noRequests": "No requests available",
+    "noRequestsHint": "Check back later for new food requests from the community.",
+    "requested": "Requested",
+    "donateToRequest": "Donate to this request"
+  },
+  "recipient": {
+    "requestFood": "Request Food",
+    "subtitleNgo": "Request food assistance for your community",
+    "subtitleIndividual": "Request food assistance for your family",
+  "heroNgo": "Helping communities access nutritious food and support those in need.",
+  "heroIndividual": "Find food assistance and connect with generous donors in your community.",
+  "postYourNeeds": "Post your food needs",
+  "viewDonations": "View Donations",
+  "browseAvailable": "Browse available food",
+  "totalRequests": "Total Requests",
+  "mealsReceived": "Meals Received",
+  "activeRequests": "Active Requests",
+  "yourRequests": "Your Requests",
+  "noRequestsYet": "No requests yet",
+  "postFirstRequest": "Post Your First Request",
+  "availableDonations": "Available Donations",
+  "availableSubtitle": "Discover fresh food donations from generous donors nearby",
+  "couldNotLoadDonations": "Could not load donations",
+  "noDonations": "No donations available",
+  "noDonationsHint": "Check back later for new food donations from the community.",
+  "phoneForPickup": "Your phone for pickup",
+  "claimFood": "Claim Food",
+  "claiming": "Claiming...",
+  "post": "Post Request",
+  "posting": "Posting...",
+  "claimError": "Failed to claim donation. Please try again.",
+    "ngoInfo": "NGO Information",
+    "ngoRegId": "NGO Registration ID",
+    "postSuccess": "✅ Request posted successfully.",
+    "postError": "Failed to post request. Please try again.",
+    "claimSuccess": "🎉 You claimed the donation. Arrange pickup."
+  }
+}
