@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "nodemon server/app.js"
+    "server": "nodemon server/app.js",
+    "deploy": "git push"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
