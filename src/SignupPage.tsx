@@ -13,6 +13,7 @@ type UserRole = 'donor' | 'recipient' | 'ngo';
 
 const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSuccess }) => {
   const { t } = useTranslation();
+  const API_BASE = ((import.meta as any).env?.VITE_API_URL || window.location.origin || '').replace(/\/+$/, '');
   const [formData, setFormData] = useState({
     name: '',
     emailOrPhone: '',
@@ -132,7 +133,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigateToLogin, onAuthSucces
         }
       }
 
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         body: formDataToSend
       });

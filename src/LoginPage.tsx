@@ -10,6 +10,7 @@ interface LoginPageProps {
 
 const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess }) => {
   const { t } = useTranslation();
+  const API_BASE = ((import.meta as any).env?.VITE_API_URL || window.location.origin || '').replace(/\/+$/, '');
   const [formData, setFormData] = useState({
     emailOrPhone: '',
     password: ''
@@ -34,7 +35,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigateToSignup, onAuthSuccess
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

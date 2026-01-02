@@ -42,8 +42,23 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
 // CORS configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://hungerlink-gules.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://hungerlink-gules.vercel.app/',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // Allow non-browser clients
+    if (allowedOrigins.some((o) => o === origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

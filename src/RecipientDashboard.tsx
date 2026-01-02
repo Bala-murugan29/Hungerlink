@@ -53,7 +53,7 @@ const RecipientDashboard: React.FC<RecipientDashboardProps> = ({ user, onLogout 
   const [claimPhoneByDonation, setClaimPhoneByDonation] = useState<Record<string, string>>({});
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' as 'success' | 'error' });
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
+  const API_BASE = ((import.meta as any).env?.VITE_API_URL || window.location.origin || '').replace(/\/+$/, '') || 'http://localhost:5000';
 
   // Request form state
   const [requestForm, setRequestForm] = useState({
